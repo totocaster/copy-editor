@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}History · {{ doc.title }}{% endblock %}
+{% block body %}
+<main class="mx-auto max-w-2xl px-6 py-12">
+  {% from "partials/icons.html" import icon %}
+  <div class="mb-6 flex items-center gap-2">
+    <a href="/d/{{ doc.id }}" class="icon-btn shrink-0" title="Back to editor" aria-label="Back to editor">{{ icon('back') }}</a>
+    <h1 class="text-2xl font-semibold tracking-tight">History · {{ doc.title }}</h1>
+  </div>
+  <div id="drawer-body" class="overflow-hidden rounded-lg border border-stone-200 bg-white">
+    {% include "partials/revisions_panel.html" %}
+  </div>
+</main>
+{% endblock %}

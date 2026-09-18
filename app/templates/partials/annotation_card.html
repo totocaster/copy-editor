@@ -1,0 +1,90 @@
+{% set kind = KINDS.get(a.kind, KINDS['note']) %}
+{% set is_open = a.status in ('open', 'pending') %}
+{% set is_ai = a.author == 'ai' %}
+{% set run = runs_by_id[a.run_id] if a.run_id and a.run_id in runs_by_id else None %}
+{% set rule = rules_by_number[a.rule_number] if a.rule_number and a.rule_number in rules_by_number else None %}
+{% set url = '/d/' ~ doc.id ~ '/annotations/' ~ a.id %}
+{% set origin = (run.pass_name if run else 'Pass') ~ ((' · ' ~ run.model) if run and run.model else '') %}
+<div id="ann-{{ a.id }}" data-card="{{ a.id }}" data-kind="{{ a.kind }}" data-status="{{ a.status }}" data-author="{{ a.author }}"
+     data-run="{{ a.run_id or '' }}" data-rule="{{ a.rule_number or '' }}" data-text="{{ a.suggested_text }}"
+     class="ann-card {{ 'is-positioned' if is_open else 'is-static' }}{% if editing == a.id %} is-editing is-active{% endif %}">
+  <div class="flex items-center gap-2 text-xs">
+    <span class="kind-badge" data-kind="{{ a.kind }}">{{ kind.label }}</span>
+    {% if is_ai %}
+      {% if a.rule_number %}
+      <a href="/settings?tab=rules" class="ai-chip" title="R{{ a.rule_number }}{% if rule %}: {{ rule.text }}{% endif %} — {{ origin }}">✦ R{{ a.rule_number }}</a>
+      {% else %}
+      <span class="ai-chip" title="{{ origin }}">✦ {{ run.pass_name if run else 'Pass' }}</span>
+      {% endif %}
+    {% else %}
+      <span class="you-chip">You</span>
+    {% endif %}
+    {% if not is_open %}<span class="status-badge">{{ a.status }}{% if a.dismiss_reason %} · {{ DISMISS_REASONS.get(a.dismiss_reason, a.dismiss_reason)|lower }}{% endif %}</span>{% endif %}
+    <span class="ml-auto whitespace-nowrap text-stone-400" title="{{ a.created_at|fmt_dt }}">{{ a.created_at|ago }}</span>
+  </div>
+  {% if a.quote %}<div class="ann-reveal ann-reveal--quote"><div><div class="ann-quote">{{ a.quote|excerpt(140) }}</div></div></div>{% endif %}
+
+  {% if editing == a.id and not is_ai %}
+  <form hx-put="{{ url }}" hx-target="#ann-{{ a.id }}" hx-swap="outerHTML" class="mt-2 space-y-2">
+    <input type="hidden" name="kind" value="{{ a.kind }}">
+    <textarea name="body" rows="3" placeholder="Note to self…" class="input" data-autofocus>{{ a.body }}</textarea>
+    <div class="flex gap-2">
+      <button type="submit" class="btn-primary btn-sm">Save</button>
+      {% if a.body %}
+      <button type="button" class="btn btn-sm" hx-get="{{ url }}" hx-target="#ann-{{ a.id }}" hx-swap="outerHTML">Cancel</button>
+      {% else %}
+      <button type="button" class="btn btn-sm" hx-delete="{{ url }}" hx-target="#sidebar-content" hx-swap="innerHTML">Discard</button>
+      {% endif %}
+    </div>
+  </form>
+  {% else %}
+    {% if a.suggested_text %}
+    <div class="ann-suggest"><span class="label">{{ 'Correct to' if a.kind == 'check' else 'Replace with' }}</span>{{ a.suggested_text }}</div>
+    {% endif %}
+    {% if a.kind == 'check' and a.confidence %}
+    <div class="conf conf-{{ a.confidence }}" title="How sure the checker is that the claim is wrong">{{ a.confidence }} confidence</div>
+    {% endif %}
+    {% if a.body %}
+    <div class="ann-body">{{ a.body }}</div>
+    {% elif a.kind == 'cut' %}
+    <div class="ann-body italic text-stone-400">Proposed cut.</div>
+    {% elif not a.suggested_text %}
+    <div class="ann-body italic text-stone-400">No comment yet.</div>
+    {% endif %}
+    <div class="ann-reveal"><div><div class="ann-actions">
+      {% if is_open %}
+        {% if a.kind in ('suggest', 'check') and a.suggested_text %}
+        <button type="button" class="btn-primary btn-sm" data-id="{{ a.id }}" data-text="{{ a.suggested_text }}"
+                hx-post="{{ url }}/status" hx-vals='{"status": "accepted"}' hx-target="#sidebar-content" hx-swap="innerHTML"
+                hx-on::before-request="Workshop.applySuggestion(this.dataset.id, this.dataset.text)">{{ 'Correct' if a.kind == 'check' else 'Accept' }}</button>
+        {% elif a.kind == 'check' %}
+        <button type="button" class="btn btn-sm" title="The claim checks out"
+                hx-post="{{ url }}/status" hx-vals='{"status": "resolved"}' hx-target="#sidebar-content" hx-swap="innerHTML">Verified</button>
+        {% elif a.kind == 'cut' %}
+        <button type="button" class="btn-primary btn-sm" data-id="{{ a.id }}" data-text=""
+                hx-post="{{ url }}/status" hx-vals='{"status": "accepted"}' hx-target="#sidebar-content" hx-swap="innerHTML"
+                hx-on::before-request="Workshop.applySuggestion(this.dataset.id, this.dataset.text)">Cut it</button>
+        {% else %}
+        <button type="button" class="btn btn-sm"
+                hx-post="{{ url }}/status" hx-vals='{"status": "resolved"}' hx-target="#sidebar-content" hx-swap="innerHTML">Resolve</button>
+        {% endif %}
+        {% if is_ai %}
+        <details class="dismiss-menu">
+          <summary class="btn btn-sm" title="Dismiss, and say why so later passes learn from it">Dismiss ▾</summary>
+          <div class="reason-menu" role="menu">
+            {% for key, label in DISMISS_REASONS.items() %}
+            <button type="button" role="menuitem" hx-post="{{ url }}/status" hx-vals='{"status": "dismissed", "reason": "{{ key }}"}' hx-target="#sidebar-content" hx-swap="innerHTML">{{ label }}</button>
+            {% endfor %}
+          </div>
+        </details>
+        {% else %}
+        <button type="button" class="btn-ghost btn-sm" hx-get="{{ url }}/edit" hx-target="#ann-{{ a.id }}" hx-swap="outerHTML">Edit</button>
+        {% endif %}
+      {% endif %}
+      {% if not is_ai %}
+      <button type="button" class="btn-ghost btn-sm ml-auto" hx-delete="{{ url }}" hx-confirm="Delete this note?"
+              hx-target="#sidebar-content" hx-swap="innerHTML">Delete</button>
+      {% endif %}
+    </div></div></div>
+  {% endif %}
+</div>

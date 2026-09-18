@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Settings · Write{% endblock %}
+{% block body %}
+{% from "partials/icons.html" import icon %}
+<header class="topbar">
+  <div class="topbar-inner max-w-[1180px]">
+    <a href="/" class="icon-btn shrink-0" title="All documents" aria-label="All documents">{{ icon('back') }}</a>
+    <span class="px-1.5 text-lg font-medium">Settings</span>
+  </div>
+</header>
+<main class="mx-auto grid max-w-[1180px] grid-cols-[11rem_minmax(0,1fr)] gap-8 px-6 py-8">
+  <nav class="space-y-0.5 text-sm">
+    {% for t in ['account', 'rules', 'passes', 'runs'] %}
+    <a href="/settings?tab={{ t }}" hx-get="/settings/{{ t }}" hx-target="#settings-main" hx-swap="innerHTML"
+       hx-on:click="document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('is-active')); this.classList.add('is-active')"
+       class="nav-link{% if tab == t %} is-active{% endif %}">{{ t|capitalize }}</a>
+    {% endfor %}
+  </nav>
+  <div id="settings-main">
+    {% include "partials/settings_" ~ tab ~ ".html" %}
+  </div>
+</main>
+{% endblock %}

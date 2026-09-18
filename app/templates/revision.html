@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Revision {{ rev.seq }} · {{ doc.title }}{% endblock %}
+{% block body %}
+{% from "partials/icons.html" import icon %}
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="/d/{{ doc.id }}" class="icon-btn shrink-0" title="Back to editor" aria-label="Back to editor">{{ icon('back') }}</a>
+    <div class="min-w-0 flex-1 truncate px-1.5 text-lg">
+      <span class="font-medium">Revision {{ rev.seq }}</span>
+      <span class="text-stone-400"> of {{ doc.title }}</span>
+      {% if rev.is_major %}<span class="major-badge ml-2 align-middle">Major</span>{% endif %}
+    </div>
+    <div class="topbar-status">{{ rev.created_at|fmt_dt }} · {{ rev.word_count }} words</div>
+    <span class="topbar-divider" aria-hidden="true"></span>
+    <form method="post" action="/d/{{ doc.id }}/revisions/{{ rev.id }}/restore" class="shrink-0"
+          onsubmit="return confirm('Restore revision {{ rev.seq }}? The current text is saved as a revision first.')">
+      <button type="submit" class="btn h-8">Restore this revision</button>
+    </form>
+  </div>
+</header>
+
+<main class="mx-auto grid max-w-[1280px] grid-cols-[minmax(0,1fr)_16rem] items-start gap-10 px-6 py-12">
+  <article class="mx-auto w-full max-w-[68ch]">
+    {% if rev.note %}<p class="mb-6 text-sm text-stone-500">Note: {{ rev.note }}</p>{% endif %}
+    <nav class="mb-8 flex gap-1 border-b border-stone-200 text-sm">
+      {% set base = '/d/' ~ doc.id ~ '/r/' ~ rev.id %}
+      <a href="{{ base }}?against=none" class="tab{% if diff is none %} is-active{% endif %}">Text</a>
+      {% if prev %}
+      <a href="{{ base }}?against=prev" class="tab{% if against == 'prev' and diff is not none %} is-active{% endif %}">Diff vs revision {{ prev.seq }}</a>
+      {% endif %}
+      <a href="{{ base }}?against=current" class="tab{% if against == 'current' %} is-active{% endif %}">Diff vs current</a>
+    </nav>
+
+    {% if diff is not none %}
+      <p class="mb-4 text-sm text-stone-500">
+        Compared with {{ other_label }}:
+        <span class="text-emerald-700">+{{ stats.added }}</span> /
+        <span class="text-rose-700">−{{ stats.removed }}</span> words
+      </p>
+      <div class="diff-view">{{ diff|safe }}</div>
+    {% else %}
+      <div class="prose prose-stone prose-lg max-w-none">{{ html|safe }}</div>
+    {% endif %}
+  </article>
+
+  <aside class="text-sm">
+    <h2 class="mb-3 text-xs uppercase tracking-wide text-stone-400">All revisions</h2>
+    <ol class="space-y-1">
+      {% for r in revisions %}
+      <li>
+        <a href="/d/{{ doc.id }}/r/{{ r.id }}?against={{ against }}"
+           class="flex items-center gap-2 rounded px-2 py-1 hover:bg-stone-100{% if r.id == rev.id %} bg-stone-200/70 font-medium{% endif %}">
+          <span class="{% if r.is_major %}text-amber-500{% else %}text-stone-300{% endif %}">★</span>
+          <span>r{{ r.seq }}</span>
+          <span class="ml-auto text-xs text-stone-400">{{ r.created_at|ago }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+  </aside>
+</main>
+{% endblock %}

@@ -1,0 +1,18 @@
+<li id="doc-{{ d.id }}" class="group flex items-center gap-4 py-4">
+  <a href="/d/{{ d.id }}" class="min-w-0 flex-1">
+    <div class="truncate font-medium">{{ d.title }}</div>
+    <div class="mt-0.5 flex flex-wrap gap-x-3 text-sm text-stone-500">
+      <span>{{ d.word_count }} words</span>
+      <span>{{ d.revision_count }} revision{{ '' if d.revision_count == 1 else 's' }}{% if d.major_count %}, {{ d.major_count }} major{% endif %}</span>
+      {% if d.open_annotations %}<span>{{ d.open_annotations }} open note{{ '' if d.open_annotations == 1 else 's' }}</span>{% endif %}
+      <span title="{{ d.updated_at|fmt_dt }}">edited {{ d.updated_at|ago }}</span>
+    </div>
+  </a>
+  <button type="button"
+          hx-delete="/documents/{{ d.id }}"
+          hx-target="closest li" hx-swap="outerHTML"
+          hx-confirm="Delete “{{ d.title }}” and all of its revisions? This cannot be undone."
+          class="text-sm text-stone-400 opacity-0 transition hover:text-red-600 group-hover:opacity-100 focus:opacity-100">
+    Delete
+  </button>
+</li>

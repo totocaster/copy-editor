@@ -1,0 +1,11 @@
+{# A grouped model picker. Expects: groups, name, id, selected, allow_blank (optional), blank_label (optional) #}
+<select name="{{ name }}" id="{{ id }}" class="input py-1{% if extra_class %} {{ extra_class }}{% endif %}">
+  {% if allow_blank %}<option value="">{{ blank_label or 'Account default' }}</option>{% endif %}
+  {% for g in groups %}
+  <optgroup label="{{ g.label }}{% if not g.status.installed %} · not installed{% elif not g.status.signed_in %} · not signed in{% endif %}">
+    {% for m in g.models %}
+    <option value="{{ g.id }}:{{ m.id }}"{% if (g.id ~ ':' ~ m.id) == selected %} selected{% endif %}{% if not g.status.signed_in %} disabled{% endif %} title="{{ m.description }}">{{ m.label }}</option>
+    {% endfor %}
+  </optgroup>
+  {% endfor %}
+</select>

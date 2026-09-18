@@ -1,0 +1,18 @@
+<div id="rule-{{ r.id }}" class="rule-row{% if not r.enabled %} is-off{% endif %}">
+  <div class="flex w-6 shrink-0 flex-col text-stone-300">
+    <button type="button" class="hover:text-stone-700" title="Move up" hx-post="/settings/rules/{{ r.id }}/move" hx-vals='{"direction": -1}' hx-target="#settings-main" hx-swap="innerHTML">▲</button>
+    <button type="button" class="hover:text-stone-700" title="Move down" hx-post="/settings/rules/{{ r.id }}/move" hx-vals='{"direction": 1}' hx-target="#settings-main" hx-swap="innerHTML">▼</button>
+  </div>
+  <input type="checkbox" class="accent-stone-900" title="{{ 'Enabled' if r.enabled else 'Disabled' }}"{% if r.enabled %} checked{% endif %}
+         hx-post="/settings/rules/{{ r.id }}/toggle" hx-target="#rule-{{ r.id }}" hx-swap="outerHTML">
+  <span class="w-8 shrink-0 font-mono text-xs text-stone-400">R{{ r.number }}</span>
+  <input name="text" value="{{ r.text }}" class="rule-text" autocomplete="off"
+         hx-put="/settings/rules/{{ r.id }}" hx-trigger="change" hx-target="#rule-{{ r.id }}" hx-swap="outerHTML">
+  <input name="tag" value="{{ r.tag }}" placeholder="tag" class="rule-tag" autocomplete="off"
+         hx-put="/settings/rules/{{ r.id }}" hx-trigger="change" hx-target="#rule-{{ r.id }}" hx-swap="outerHTML">
+  <span class="w-16 shrink-0 text-right text-xs tabular-nums text-stone-400" title="Fired {{ r.fired_count }} times, dismissed {{ r.dismissed_count }} times">
+    {{ r.fired_count }}×{% if r.dismissed_count %} <span class="text-rose-500">−{{ r.dismissed_count }}</span>{% endif %}
+  </span>
+  <button type="button" class="shrink-0 text-stone-300 hover:text-red-600" title="Delete"
+          hx-delete="/settings/rules/{{ r.id }}" hx-confirm="Delete rule R{{ r.number }}?" hx-target="#settings-main" hx-swap="innerHTML">✕</button>
+</div>

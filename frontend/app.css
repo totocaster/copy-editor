@@ -1,0 +1,320 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@source "../app/templates";
+@source "./";
+
+:root {
+  --font-prose: "Charter", "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  /* Annotation kind colours as RGB triplets so they can be tinted with alpha. */
+  --k: 250 204 21;
+}
+[data-kind="note"]     { --k: 250 204 21; }   /* yellow-400  */
+[data-kind="suggest"]  { --k: 56 189 248; }   /* sky-400     */
+[data-kind="question"] { --k: 167 139 250; }  /* violet-400  */
+[data-kind="cut"]      { --k: 251 113 133; }  /* rose-400    */
+[data-kind="check"]    { --k: 251 146 60; }   /* orange-400  */
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center gap-1.5 rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 shadow-sm transition hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400;
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-stone-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center rounded-md px-2 py-1 text-sm text-stone-500 transition hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400;
+  }
+  .btn-sm { @apply px-2 py-1 text-xs; }
+  .icon-btn {
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-stone-500 transition hover:bg-stone-200/70 hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 disabled:opacity-30 disabled:hover:bg-transparent;
+  }
+  .topbar { @apply sticky top-0 z-30 border-b border-stone-200 bg-stone-50/90 backdrop-blur; }
+  .topbar-inner { @apply mx-auto flex h-14 max-w-[1280px] items-center gap-2 px-4 sm:px-6; }
+  .topbar-status { @apply hidden shrink-0 items-center gap-1.5 whitespace-nowrap text-sm text-stone-400 md:flex; }
+  .topbar-divider { @apply mx-1 hidden h-5 w-px shrink-0 bg-stone-200 md:block; }
+  .sidebar-bar {
+    @apply sticky top-0 z-20 mb-3 flex items-center gap-2 border-b border-stone-200/80 bg-stone-50/95 py-1.5 backdrop-blur;
+  }
+  .sidebar-bar[hidden] { display: none; }
+  /* Own scroll container. Spacers are pseudo-elements rather than padding because
+     a sticky child anchors at the scroller's content edge, not its padding edge. */
+  .sidebar-panel {
+    position: sticky;
+    top: 3.5rem;
+    height: calc(100vh - 3.5rem);
+    margin-top: -3rem;
+    padding: 0 0.25rem;
+    margin-inline: -0.25rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-stone-300) transparent;
+  }
+  .sidebar-panel::before { content: ""; display: block; height: 3rem; }
+  .sidebar-panel::after { content: ""; display: block; height: calc(100vh - 3.5rem); }
+  .connectors { position: fixed; inset: 0; z-index: 25; width: 100vw; height: 100vh; pointer-events: none; }
+  .input {
+    @apply block w-full rounded-md border border-stone-300 bg-white px-2.5 py-1.5 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500;
+  }
+  .tab { @apply -mb-px border-b-2 border-transparent px-3 py-2 text-stone-500 transition hover:text-stone-900; }
+  .tab.is-active { @apply border-stone-900 text-stone-900; }
+  .major-badge {
+    @apply rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800;
+  }
+  .status-badge { @apply rounded bg-stone-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-stone-500; }
+  .kind-badge {
+    @apply rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-800;
+    background-color: rgb(var(--k) / 0.3);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Editor
+--------------------------------------------------------------------------- */
+#editor .tiptap {
+  font-family: var(--font-prose);
+  font-size: 1.1875rem;
+  line-height: 1.75;
+  min-height: 60vh;
+  outline: none;
+  caret-color: var(--color-stone-900);
+}
+#editor .tiptap ::selection { background: rgb(0 0 0 / 0.12); }
+#editor .tiptap > * + * { margin-top: 0; }
+#editor .tiptap .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--color-stone-300);
+}
+#editor .tiptap h1 { font-weight: 600; letter-spacing: -0.01em; }
+#editor .tiptap h2, #editor .tiptap h3 { font-weight: 600; }
+#editor .tiptap hr { border-color: var(--color-stone-200); }
+#editor .tiptap code { font-size: 0.85em; }
+#editor .tiptap pre { font-size: 0.9rem; line-height: 1.6; }
+
+/* Save indicator */
+#save-status[data-state="dirty"]  { color: var(--color-stone-400); }
+#save-status[data-state="saving"] { color: var(--color-stone-400); }
+#save-status[data-state="error"]  { color: var(--color-red-600); }
+
+/* ---------------------------------------------------------------------------
+   Highlights (annotation marks in the text)
+--------------------------------------------------------------------------- */
+mark.annotation {
+  color: inherit;
+  background-color: rgb(var(--k) / 0.32);
+  border-bottom: 2px solid rgb(var(--k) / 0.9);
+  padding: 0.08em 0;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+mark.annotation:hover, mark.annotation.is-hover { background-color: rgb(var(--k) / 0.5); }
+mark.annotation.is-active {
+  background-color: rgb(var(--k) / 0.6);
+  box-shadow: 0 0 0 3px rgb(var(--k) / 0.25);
+}
+mark.annotation[data-kind="cut"] {
+  background-color: rgb(var(--k) / 0.14);
+  text-decoration: line-through;
+  text-decoration-color: rgb(var(--k) / 0.9);
+  text-decoration-thickness: 1.5px;
+}
+mark.annotation[data-kind="cut"].is-active { background-color: rgb(var(--k) / 0.35); }
+/* Read-only revision view: keep highlights faint */
+.prose mark.annotation { cursor: default; }
+
+/* ---------------------------------------------------------------------------
+   Sidebar cards (Genius-style: absolutely positioned beside their highlight)
+--------------------------------------------------------------------------- */
+#annotation-layer { display: flex; flex-direction: column; gap: 0.5rem; }
+.ann-card {
+  @apply rounded-lg border border-stone-200 bg-white p-3 text-sm shadow-sm;
+  border-left-width: 3px;
+  border-left-color: rgb(var(--k));
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s, opacity 0.2s;
+}
+.ann-card[hidden] { display: none; }
+.ann-card.is-positioned:not(.is-active) { opacity: 0.85; }
+.ann-card:hover { @apply border-stone-300; opacity: 1; }
+.ann-card.is-active { @apply border-stone-300 shadow-md; opacity: 1; z-index: 2; cursor: default; }
+.ann-card.is-static { cursor: default; }
+/* Quote and actions unfold when a card becomes active (grid-rows trick, so height animates). */
+.ann-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.22s ease, opacity 0.18s ease;
+}
+.ann-reveal > * { min-height: 0; overflow: hidden; }
+.ann-reveal.is-open > * { overflow: visible; } /* after unfolding, so dropdowns inside are not clipped */
+.ann-card.is-active .ann-reveal, .ann-card.is-static .ann-reveal--quote { grid-template-rows: 1fr; opacity: 1; }
+.ann-quote { @apply mt-1.5 border-l-2 border-stone-200 pl-2 text-xs italic leading-snug text-stone-500; }
+.ann-body { @apply mt-1.5 whitespace-pre-wrap leading-snug text-stone-800; }
+.ann-suggest { @apply mt-1.5 rounded bg-stone-50 px-2 py-1 leading-snug text-stone-800; }
+.ann-suggest .label { @apply mr-1.5 text-[10px] font-semibold uppercase tracking-wide; color: rgb(var(--k) / 1); filter: brightness(0.7); }
+.ann-actions { @apply mt-2.5 flex items-center gap-1.5; }
+@media (prefers-reduced-motion: reduce) {
+  .ann-reveal, .ann-card, mark.annotation { transition: none; }
+}
+.conf { @apply mt-1.5 inline-flex items-center gap-1.5 text-[11px] text-stone-500; }
+.conf::before { content: ""; width: 7px; height: 7px; border-radius: 9999px; background: var(--color-stone-300); }
+.conf-high::before { background: var(--color-orange-500); }
+.conf-medium::before { background: var(--color-orange-300); }
+.conf-low::before { background: var(--color-stone-300); }
+
+/* ---------------------------------------------------------------------------
+   Floating menus
+--------------------------------------------------------------------------- */
+.bubble-menu {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--color-stone-900);
+  color: white;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  white-space: nowrap;
+}
+.bubble-menu[hidden] { display: none; }
+.bubble-menu button {
+  @apply inline-flex h-7 items-center gap-1.5 rounded px-2 text-xs font-medium text-stone-200 transition hover:bg-stone-700 hover:text-white;
+}
+.bubble-menu button.is-on { @apply bg-stone-600 text-white; }
+.bubble-menu button b, .bubble-menu button i, .bubble-menu button s { font-size: 0.85rem; }
+.bubble-menu button code { font-family: var(--font-mono); font-size: 0.75rem; }
+.bubble-menu .sep { width: 1px; height: 16px; margin: 0 4px; background: var(--color-stone-700); }
+.bubble-menu .swatch { width: 10px; height: 10px; border-radius: 3px; background: rgb(var(--k)); }
+
+.slash-menu {
+  position: absolute;
+  z-index: 20;
+  min-width: 15rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  @apply rounded-lg border border-stone-200 bg-white p-1 shadow-lg;
+}
+.slash-menu[hidden] { display: none; }
+.slash-item {
+  @apply flex w-full flex-col items-start rounded px-2.5 py-1.5 text-left text-sm text-stone-800;
+}
+.slash-item.is-selected, .slash-item:hover { @apply bg-stone-100; }
+.slash-item span { @apply text-xs text-stone-400; }
+.slash-empty { @apply px-2.5 py-1.5 text-sm text-stone-400; }
+
+/* ---------------------------------------------------------------------------
+   History drawer and revisions
+--------------------------------------------------------------------------- */
+.drawer { position: fixed; inset: 0; z-index: 40; }
+.drawer[hidden] { display: none; }
+.drawer-backdrop { position: absolute; inset: 0; background: rgb(0 0 0 / 0.18); }
+.drawer-panel {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: 27rem; max-width: 100vw;
+  display: flex; flex-direction: column;
+  background: white;
+  box-shadow: -12px 0 40px rgb(0 0 0 / 0.12);
+}
+.rev-row { @apply flex items-start gap-3 px-5 py-3; }
+.rev-row.is-major { @apply bg-amber-50/70; }
+.star { @apply mt-0.5 shrink-0 text-stone-300 transition hover:text-amber-400; }
+.star[aria-pressed="true"] { @apply text-amber-500; }
+
+.diff-view {
+  font-family: var(--font-prose);
+  font-size: 1.125rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+.diff-view ins { @apply rounded-sm bg-emerald-100 text-emerald-900 no-underline; }
+.diff-view del { @apply rounded-sm bg-rose-100 text-rose-900 line-through decoration-rose-400; }
+
+/* ---------------------------------------------------------------------------
+   AI passes: chips, run menu, run strip, dismiss reasons
+--------------------------------------------------------------------------- */
+.ai-chip {
+  @apply inline-flex max-w-[14rem] items-center gap-1 truncate rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide;
+  background: var(--color-stone-900);
+  color: white;
+}
+a.ai-chip:hover { background: var(--color-stone-700); }
+.you-chip { @apply inline-flex items-center rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-500; }
+.chip {
+  @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-stone-200 bg-white px-2 py-px text-[11px] leading-5 text-stone-600 transition hover:border-stone-400;
+}
+.chip.is-on { @apply border-stone-900 bg-stone-900 text-white; }
+
+.popover {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 35;
+  max-width: calc(100vw - 2rem);
+  @apply rounded-lg border border-stone-200 bg-white p-2 shadow-xl;
+}
+.popover[hidden] { display: none; }
+.menu-item { @apply flex w-full cursor-pointer items-start gap-3 rounded-md px-2.5 py-2 text-left hover:bg-stone-100; }
+.menu-item:has(input:checked) { @apply bg-stone-100; }
+
+.run-strip {
+  @apply mb-3 rounded-lg p-3 text-sm;
+  background: var(--color-stone-900);
+  color: white;
+}
+.run-strip.is-error { background: var(--color-red-700); }
+.run-strip.is-failed { background: var(--color-red-800); }
+.run-strip.is-cancelled, .run-strip.is-done { background: var(--color-stone-800); }
+.run-strip .progress { @apply mt-2 h-1 overflow-hidden rounded bg-stone-700; }
+.run-strip .progress > div { height: 100%; background: white; transition: width 0.6s ease; min-width: 6%; animation: strip-pulse 1.6s ease-in-out infinite; }
+@keyframes strip-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+.strip-btn { @apply rounded border border-stone-600 px-2 py-0.5 text-xs text-stone-100 transition hover:bg-stone-700; }
+.run-strip .letter { @apply mt-2 border-t border-stone-700 pt-2 text-xs; }
+.run-strip .letter summary { @apply cursor-pointer select-none font-medium text-stone-300; }
+.run-strip .letter p { @apply mt-1 whitespace-pre-line leading-snug text-stone-200; }
+
+.dismiss-menu { position: relative; display: inline-block; }
+.dismiss-menu summary { list-style: none; cursor: pointer; }
+.dismiss-menu summary::-webkit-details-marker { display: none; }
+.dismiss-menu[open] > summary { @apply bg-stone-100 text-stone-900; }
+.dismiss-menu .reason-menu {
+  position: absolute; left: 0; top: calc(100% + 4px); z-index: 6; min-width: 10.5rem;
+  @apply rounded-lg border border-stone-200 bg-white p-1 shadow-xl;
+}
+.dismiss-menu .reason-menu button {
+  @apply block w-full whitespace-nowrap rounded-md px-2.5 py-1.5 text-left text-sm text-stone-700 hover:bg-stone-100 focus:outline-none focus-visible:bg-stone-100;
+}
+
+/* ---------------------------------------------------------------------------
+   Settings
+--------------------------------------------------------------------------- */
+.nav-link { @apply block rounded px-2 py-1 text-stone-500 hover:bg-stone-100 hover:text-stone-900; }
+.nav-link.is-active { @apply bg-stone-200/70 font-medium text-stone-900; }
+.card { @apply rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm; }
+.rule-row { @apply flex items-center gap-2 px-3 py-1.5 text-sm; }
+.rule-row.is-off .rule-text { @apply text-stone-400 line-through; }
+.rule-text { @apply min-w-0 flex-1 rounded bg-transparent px-1.5 py-1 text-stone-800 outline-none focus:bg-stone-50 focus:ring-1 focus:ring-stone-300; }
+.rule-tag { @apply w-24 shrink-0 rounded bg-transparent px-1.5 py-1 text-xs text-stone-500 outline-none placeholder:text-stone-300 focus:bg-stone-50 focus:ring-1 focus:ring-stone-300; }
+.pass-item { @apply block rounded-md border border-stone-200 bg-white px-3 py-2 hover:border-stone-400; }
+.pass-item.is-selected { @apply border-stone-900 shadow-sm; }
+
+/* ---------------------------------------------------------------------------
+   Keyboard shortcuts sheet
+--------------------------------------------------------------------------- */
+.sheet {
+  margin: auto; /* the CSS reset zeroes the margin browsers use to centre a modal dialog */
+  width: 36rem; max-width: calc(100vw - 2rem); max-height: calc(100vh - 3rem); overflow-y: auto;
+  @apply rounded-xl border border-stone-200 bg-white p-6 text-stone-900 shadow-2xl;
+}
+.sheet::backdrop { background: rgb(28 25 23 / 0.28); }
+.sheet h3 { @apply mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400; }
+.sheet dl div { @apply flex items-center justify-between gap-4 py-1 text-sm; }
+.sheet dt { @apply text-stone-600; }
+.sheet dd { @apply flex shrink-0 items-center gap-1; }
+.sheet .or { @apply mx-1 text-xs text-stone-400; }
+kbd {
+  @apply inline-flex h-5 min-w-5 items-center justify-center rounded border border-stone-300 bg-stone-50 px-1.5 font-sans text-[11px] font-medium text-stone-700;
+  box-shadow: 0 1px 0 var(--color-stone-300);
+}

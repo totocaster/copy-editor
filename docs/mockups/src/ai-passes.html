@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI editing passes · mockup and proposal (v2)</title>
+<style>/*INLINE_CSS*/</style>
+</head>
+<body class="bg-white text-stone-900 antialiased">
+<main class="mx-auto max-w-[1180px] px-6 py-12">
+
+<header class="mb-12 border-b border-stone-200 pb-8">
+  <p class="text-xs uppercase tracking-wide text-stone-400">Write · proposal for approval · v2 · Sep 18, 2026</p>
+  <h1 class="mt-2 text-3xl font-semibold tracking-tight">AI editing passes</h1>
+  <p class="mt-3 max-w-2xl text-stone-600">Two changes from v1. The model runs under your ChatGPT subscription through the Codex CLI already
+    signed in on this machine, with no API key. And the copy edit is driven by a <strong>rulebook</strong>: one-line rules you add and edit as
+    you write, every one checked on each pass, with findings reported as annotation cards that name the rule.</p>
+  <p class="mt-2 text-sm text-stone-500">Changed since v1: <span class="rounded bg-amber-100 px-1.5 py-0.5 text-amber-900">account</span> replaces the API key,
+    <span class="rounded bg-amber-100 px-1.5 py-0.5 text-amber-900">rules</span> replace editor profiles, and copy edit cards carry a rule chip.</p>
+</header>
+
+<!-- ======================================================================= -->
+<section class="mb-16">
+  <h2 class="text-xl font-semibold tracking-tight">Screen 1 · Launching a pass</h2>
+  <p class="mt-1 mb-4 text-sm text-stone-500">One header button. Copy edit is the primary pass and always runs every enabled rule.</p>
+
+  <div class="screen">
+    <div class="relative">
+      <div class="flex h-14 items-center gap-4 border-b border-stone-200 bg-stone-50/90 px-6">
+        <span class="shrink-0 text-sm text-stone-400">← Documents</span>
+        <span class="min-w-0 flex-1 truncate text-lg font-medium">The Keeper of Small Hours</span>
+        <span class="shrink-0 text-sm text-stone-500">Saved · 185 words</span>
+        <span class="ml-2 flex items-center gap-1 text-sm text-stone-600"><span class="nav-btn">‹</span><span class="min-w-[3.5rem] text-center tabular-nums">– / 2</span><span class="nav-btn">›</span></span>
+        <span class="btn-primary shrink-0"><span class="co">1</span> ✦ Edit pass ▾</span>
+        <span class="btn shrink-0">History <span class="text-stone-400">· r2</span></span>
+      </div>
+
+      <div class="absolute right-[7.5rem] top-12 z-10 w-[27rem] rounded-lg border border-stone-200 bg-white p-2 shadow-xl">
+        <div class="menu-item is-selected"><span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-stone-900"></span>
+          <div class="flex-1"><div class="flex items-center justify-between text-sm font-medium">Copy edit <span class="text-[10px] font-semibold uppercase tracking-wide text-stone-400">15 rules <span class="co">2</span></span></div>
+          <div class="text-xs text-stone-500">Checks every enabled rule in your rulebook, plus grammar, punctuation and usage. Each finding names its rule.</div></div></div>
+        <p class="px-2.5 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wide text-stone-400">Other passes</p>
+        <div class="grid grid-cols-2 gap-x-2">
+          <div class="menu-item py-1.5"><span class="mt-1 h-2 w-2 shrink-0 rounded-full border border-stone-300"></span><div><div class="text-sm">Proofread</div><div class="text-xs text-stone-500">Mechanics only</div></div></div>
+          <div class="menu-item py-1.5"><span class="mt-1 h-2 w-2 shrink-0 rounded-full border border-stone-300"></span><div><div class="text-sm">Line edit</div><div class="text-xs text-stone-500">Rhythm, word choice</div></div></div>
+          <div class="menu-item py-1.5"><span class="mt-1 h-2 w-2 shrink-0 rounded-full border border-stone-300"></span><div><div class="text-sm">Tighten</div><div class="text-xs text-stone-500">Cut 10–15%</div></div></div>
+          <div class="menu-item py-1.5"><span class="mt-1 h-2 w-2 shrink-0 rounded-full border border-stone-300"></span><div><div class="text-sm">Read as a reader</div><div class="text-xs text-stone-500">What lands, what drags</div></div></div>
+        </div>
+        <div class="mt-2 space-y-2 border-t border-stone-100 px-2.5 pt-3 text-sm">
+          <div class="grid grid-cols-[4.5rem_1fr_4rem_5.5rem] items-center gap-2"><span class="text-xs text-stone-500">Model <span class="co">3</span></span><span class="input flex items-center justify-between">gpt-6-astra <span class="text-stone-400">▾</span></span><span class="text-right text-xs text-stone-500">Effort</span><span class="input flex items-center justify-between">medium <span class="text-stone-400">▾</span></span></div>
+          <div class="grid grid-cols-[4.5rem_1fr] items-center gap-2"><span class="text-xs text-stone-500">Scope</span><span class="flex gap-4 text-sm"><label class="flex items-center gap-1.5"><input type="radio" checked class="accent-stone-900"> Whole document</label><label class="flex items-center gap-1.5 text-stone-400"><input type="radio" disabled> Selection</label></span></div>
+          <label class="flex items-center gap-2 text-xs text-stone-600"><input type="checkbox" checked class="accent-stone-900"> Save a revision before running</label>
+          <div class="flex items-center justify-between pt-1 pb-1">
+            <span class="btn-primary btn-sm">Run copy edit</span>
+            <span class="text-xs text-stone-500">Edit rules…</span>
+          </div>
+          <div class="flex items-center gap-1.5 border-t border-stone-100 pt-2 text-[11px] text-stone-500"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Signed in with ChatGPT via Codex CLI · runs count against your plan <span class="co">4</span></div>
+        </div>
+      </div>
+
+      <div class="grid min-h-[32rem] grid-cols-[minmax(0,1fr)_20rem] gap-10 px-6 py-10">
+        <div class="mx-auto w-full max-w-[68ch]" style="font-family: var(--font-prose); font-size: 1.1875rem; line-height: 1.75;">
+          <h1 class="mb-6 text-4xl font-semibold tracking-tight">The Keeper of Small Hours</h1>
+          <p>Marta had kept the lighthouse for eleven years, and in that time she had learned that the sea did not care about schedules. It came when it came.</p>
+          <p class="mt-5">The lamp needed winding every four hours. She had set an alarm once, in the first year, and slept through it, and woke to a dark tower and a fishing boat that had turned back in time. She never set an alarm again.</p>
+        </div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+  <ol class="legend">
+    <li><span class="co">1</span>One new header button. The sparkle marks anything AI-authored throughout.</li>
+    <li><span class="co">2</span>Copy edit always includes all enabled rules; the count is live. Other passes are optional presets and also see the rules, so they never propose something the rulebook forbids.</li>
+    <li><span class="co">3</span>Model and reasoning effort are passed to Codex per run. Default comes from your Codex config (gpt-6-astra); the list is editable. Medium effort is plenty for copy editing and faster than your configured high.</li>
+    <li><span class="co">4</span>Account state comes from <code>codex login status</code>. No key to paste anywhere.</li>
+  </ol>
+</section>
+
+<!-- ======================================================================= -->
+<section class="mb-16">
+  <h2 class="text-xl font-semibold tracking-tight">Screen 2 · A run in progress</h2>
+  <p class="mt-1 mb-4 text-sm text-stone-500">Findings stream into the sidebar as ordinary cards, each naming the rule it came from.</p>
+
+  <div class="screen">
+    <div class="flex h-14 items-center gap-4 border-b border-stone-200 bg-stone-50/90 px-6">
+      <span class="shrink-0 text-sm text-stone-400">← Documents</span>
+      <span class="min-w-0 flex-1 truncate text-lg font-medium">The Keeper of Small Hours</span>
+      <span class="shrink-0 text-sm text-stone-500">Saved · 186 words</span>
+      <span class="ml-2 flex items-center gap-1 text-sm text-stone-600"><span class="nav-btn">‹</span><span class="min-w-[3.5rem] text-center tabular-nums">3 / 11 <span class="co">5</span></span><span class="nav-btn">›</span></span>
+      <span class="btn shrink-0">✦ Edit pass ▾</span>
+      <span class="btn shrink-0">History <span class="text-stone-400">· r3</span></span>
+    </div>
+
+    <div class="grid grid-cols-[minmax(0,1fr)_20rem] items-start gap-10 px-6 py-10">
+      <div class="mx-auto w-full max-w-[68ch]" style="font-family: var(--font-prose); font-size: 1.1875rem; line-height: 1.75;">
+        <h1 class="mb-6 text-4xl font-semibold tracking-tight">The Keeper of Small Hours</h1>
+        <p class="mb-5">Marta had kept the lighthouse for eleven years, and in that time she had learned that the sea <mark class="annotation" data-kind="praise">did not care about schedules</mark>. It came when it came.</p>
+        <p class="mb-5">The lamp needed winding every four hours. She had set an alarm once, in the first year, and slept through it, and woke to a dark tower and a fishing boat that had <mark class="annotation" data-kind="question">turned back in time</mark>. She never set an alarm again.</p>
+        <p class="mb-5">Her brother wrote from the city to ask when she would come home. She read the letters <mark class="annotation" data-kind="suggest">twice — and put</mark> them in the drawer with the others. <mark class="annotation" data-kind="note">She was not lonely, exactly, but she had begun to notice the shape of the word.</mark></p>
+        <p class="mb-5">On the nights when the fog came in, the light seemed to go nowhere at all. It <mark class="annotation is-active" data-kind="suggest">illuminated</mark> a wall of grey and stopped. <mark class="annotation" data-kind="cut">This was, she thought, a very good metaphor for something, though she could not have said what.</mark></p>
+        <p class="mb-5">She wound the lamp. She wrote nothing back. Outside, the sea was doing what it did, <em>which was everything</em>, and none of it for her.</p>
+      </div>
+
+      <div class="space-y-3">
+        <div class="flex flex-wrap items-center gap-1.5"><span class="chip is-on">All 11</span><span class="chip">Yours 1</span><span class="chip">✦ Copy edit 10</span><span class="chip">By rule ▾</span> <span class="co">6</span></div>
+
+        <div class="rounded-lg border border-stone-900 bg-stone-900 p-3 text-sm text-white">
+          <div class="flex items-center justify-between"><span class="font-medium">✦ Copy edit · running <span class="co">7</span></span><span class="text-xs text-stone-300">Cancel</span></div>
+          <div class="mt-1 text-xs text-stone-300">15 rules · gpt-6-astra · medium · 10 findings so far</div>
+          <div class="mt-2 h-1 overflow-hidden rounded bg-stone-700"><div class="h-full w-2/3 bg-white"></div></div>
+        </div>
+
+        <div class="rounded-lg border border-stone-200 bg-white p-3 text-sm">
+          <div class="flex items-center gap-2 text-xs"><span class="ai-chip">✦ Editor’s letter</span><span class="ml-auto text-stone-400">Copy edit</span> <span class="co">8</span></div>
+          <p class="mt-2 leading-snug text-stone-700">Checked 15 rules. Clean on 11. Fired: <b>R3</b> Plain words ×4, <b>R7</b> No em dashes ×2, <b>R12</b> Don’t explain the image ×1. Three general copy-edit notes. Tense is consistent; the voice holds.</p>
+        </div>
+
+        <div class="ann-card is-static is-active" data-kind="suggest">
+          <div class="flex items-center gap-2 text-xs"><span class="kind-badge" data-kind="suggest">Suggest</span><span class="ai-chip">✦ R3 · Plain words <span class="co">9</span></span><span class="ml-auto text-stone-400">just now</span></div>
+          <div class="ann-quote">illuminated</div>
+          <div class="ann-suggest"><span class="label">Replace with</span>lit</div>
+          <div class="ann-body">Rule 3: prefer the plain word. Everything around it is plain-spoken, so this one sticks out.</div>
+          <div class="ann-actions"><span class="btn-primary btn-sm">Accept</span><span class="btn btn-sm">Edit</span><span class="btn btn-sm">Dismiss ▾ <span class="co">10</span></span></div>
+        </div>
+
+        <div class="ann-card is-static" data-kind="suggest">
+          <div class="flex items-center gap-2 text-xs"><span class="kind-badge" data-kind="suggest">Suggest</span><span class="ai-chip">✦ R7 · No em dashes</span><span class="ml-auto text-stone-400">just now</span></div>
+          <div class="ann-quote">twice — and put</div>
+          <div class="ann-suggest"><span class="label">Replace with</span>twice, and put</div>
+          <div class="ann-body">Rule 7. A comma keeps the pause without the dash.</div>
+        </div>
+
+        <div class="ann-card is-static" data-kind="cut">
+          <div class="flex items-center gap-2 text-xs"><span class="kind-badge" data-kind="cut">Cut</span><span class="ai-chip">✦ R12 · Don’t explain the image</span><span class="ml-auto text-stone-400">just now</span></div>
+          <div class="ann-quote">This was, she thought, a very good metaphor for something, though she could not…</div>
+          <div class="ann-body">Rule 12. The fog image has just been given; this sentence explains it.</div>
+        </div>
+
+        <div class="ann-card is-static" data-kind="question">
+          <div class="flex items-center gap-2 text-xs"><span class="kind-badge" data-kind="question">Question</span><span class="ai-chip">✦ General <span class="co">11</span></span><span class="ml-auto text-stone-400">just now</span></div>
+          <div class="ann-quote">turned back in time</div>
+          <div class="ann-body">Because of the dark, or in spite of it? Both readings are available on first pass.</div>
+        </div>
+
+        <div class="ann-card is-static" data-kind="note">
+          <div class="flex items-center gap-2 text-xs"><span class="kind-badge" data-kind="note">Note</span><span class="you-chip">You</span><span class="ml-auto text-stone-400">2 days ago</span></div>
+          <div class="ann-body">This is the emotional turn of the piece but it arrives inside a paragraph about letters.</div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1 text-xs text-stone-500"><span class="btn-ghost btn-sm">Accept all remaining</span><span class="btn-ghost btn-sm">Dismiss remaining</span> <span class="co">12</span></div>
+      </div>
+    </div>
+  </div>
+  <ol class="legend">
+    <li><span class="co">5</span>Stepping walks whatever the filter shows, in document order, exactly as now.</li>
+    <li><span class="co">6</span>Filter by author, by run, or by rule. “By rule” lists the rules that fired with counts.</li>
+    <li><span class="co">7</span>Run strip, polled by HTMX every couple of seconds. Cards appear as each window of the document comes back. Cancel stops between windows.</li>
+    <li><span class="co">8</span>Editor’s letter: which rules fired and how often, which stayed clean, plus anything a per-span card can’t say.</li>
+    <li><span class="co">9</span>Every rule finding carries its rule number and name. Click the chip to open that rule in the rulebook.</li>
+    <li><span class="co">10</span>Dismiss can take a reason. Dismissals per rule are counted, so a rule that keeps getting dismissed is easy to spot and reword.</li>
+    <li><span class="co">11</span>Findings outside the rulebook (grammar, usage, ambiguity) are tagged General. They can be switched off per pass.</li>
+    <li><span class="co">12</span>Bulk actions per run, with confirmation.</li>
+  </ol>
+</section>
+
+<!-- ======================================================================= -->
+<section class="mb-16">
+  <h2 class="text-xl font-semibold tracking-tight">Screen 3 · Settings: account, rules, passes</h2>
+  <p class="mt-1 mb-4 text-sm text-stone-500">Plain HTMX forms. The rulebook is the thing you’ll touch most, so it’s built for one-line edits.</p>
+
+  <div class="screen">
+    <div class="flex h-14 items-center gap-4 border-b border-stone-200 bg-stone-50/90 px-6">
+      <span class="shrink-0 text-sm text-stone-400">← Documents</span>
+      <span class="text-lg font-medium">Settings</span>
+    </div>
+    <div class="grid grid-cols-[11rem_1fr] gap-8 px-6 py-8">
+      <nav class="space-y-0.5 text-sm">
+        <div class="rounded px-2 py-1 text-stone-500">Account</div>
+        <div class="rounded bg-stone-200/70 px-2 py-1 font-medium">Rules</div>
+        <div class="rounded px-2 py-1 text-stone-500">Passes</div>
+        <div class="rounded px-2 py-1 text-stone-500">Runs</div>
+      </nav>
+
+      <div class="space-y-10">
+        <div>
+          <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">Account <span class="co">13</span></h3>
+          <div class="max-w-2xl space-y-3 text-sm">
+            <div class="flex items-center gap-3 rounded-md border border-stone-200 bg-white px-3 py-2.5">
+              <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+              <div class="flex-1"><div class="font-medium">Signed in with ChatGPT</div><div class="text-xs text-stone-500">via Codex CLI 0.154.0 · requests run under your plan and count toward its limits</div></div>
+              <span class="btn btn-sm">Re-check</span><span class="btn-ghost btn-sm">Sign out</span>
+            </div>
+            <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4 gap-y-3">
+              <span class="text-stone-500">Default model</span><span class="input flex max-w-xs items-center justify-between">gpt-6-astra <span class="text-stone-400">▾</span></span>
+              <span class="text-stone-500">Default effort</span><span class="flex gap-4"><label class="flex items-center gap-1.5"><input type="radio" class="accent-stone-900"> low</label><label class="flex items-center gap-1.5"><input type="radio" checked class="accent-stone-900"> medium</label><label class="flex items-center gap-1.5"><input type="radio" class="accent-stone-900"> high</label></span>
+            </div>
+            <details class="rounded-md border border-dashed border-stone-300 px-3 py-2 text-xs text-stone-500"><summary class="cursor-pointer">When signed out</summary>
+              <div class="mt-2 flex items-center gap-3"><span class="btn-primary btn-sm">Sign in with ChatGPT</span><span>Opens a device code: go to <code>auth.openai.com/device</code> and enter <b class="font-mono">XKCD-4471</b>. The page updates when the sign-in completes.</span></div>
+            </details>
+          </div>
+        </div>
+
+        <div>
+          <div class="mb-3 flex items-center justify-between"><h3 class="text-xs font-semibold uppercase tracking-wide text-stone-400">Rules · 14 on · 1 off <span class="co">14</span></h3><span class="text-xs text-stone-500">Import from text… <span class="co">16</span></span></div>
+          <div class="max-w-3xl overflow-hidden rounded-lg border border-stone-200 bg-white text-sm">
+            <div class="divide-y divide-stone-100">
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R1</span><span class="flex-1">Oxford comma.</span><span class="text-xs text-stone-400">Punctuation</span><span class="w-14 text-right text-xs text-stone-400">0×</span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R2</span><span class="flex-1">Keep contractions; never un-contract.</span><span class="text-xs text-stone-400">Voice</span><span class="w-14 text-right text-xs text-stone-400">0×</span></div>
+              <div class="flex items-center gap-3 bg-stone-50 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R3</span><span class="input flex-1 py-1">Prefer the plain word over the elevated one.</span><span class="text-xs text-stone-400">Diction</span><span class="w-14 text-right text-xs text-stone-600">4× <span class="co">15</span></span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R4</span><span class="flex-1">Short declaratives are deliberate; never join them.</span><span class="text-xs text-stone-400">Rhythm</span><span class="w-14 text-right text-xs text-stone-400">1×</span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R5</span><span class="flex-1">Fragments are allowed when they land.</span><span class="text-xs text-stone-400">Rhythm</span><span class="w-14 text-right text-xs text-stone-400">0×</span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R6</span><span class="flex-1">US spelling.</span><span class="text-xs text-stone-400">Mechanics</span><span class="w-14 text-right text-xs text-stone-400">0×</span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R7</span><span class="flex-1">No em dashes. Use a comma or a full stop.</span><span class="text-xs text-stone-400">Punctuation</span><span class="w-14 text-right text-xs text-stone-600">2×</span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R8</span><span class="flex-1">Cut “very”, “really”, “quite”, “rather”.</span><span class="text-xs text-stone-400">Diction</span><span class="w-14 text-right text-xs text-stone-400">1×</span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R9</span><span class="flex-1">At most one adverb per paragraph.</span><span class="text-xs text-stone-400">Diction</span><span class="w-14 text-right text-xs text-stone-400">0×</span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R10</span><span class="flex-1">Don’t touch dialogue rhythm.</span><span class="text-xs text-stone-400">Dialogue</span><span class="w-14 text-right text-xs text-stone-400">0×</span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R11</span><span class="flex-1">Sentences over 30 words: flag them, don’t rewrite.</span><span class="text-xs text-stone-400">Rhythm</span><span class="w-14 text-right text-xs text-stone-400">0×</span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R12</span><span class="flex-1">Never explain an image after it’s made.</span><span class="text-xs text-stone-400">Craft</span><span class="w-14 text-right text-xs text-stone-400">1×</span></div>
+              <div class="flex items-center gap-3 px-3 py-2 text-stone-400"><span class="text-stone-300">⋮⋮</span><input type="checkbox" class="accent-stone-900"><span class="w-8 font-mono text-xs">R13</span><span class="flex-1 line-through">No semicolons in fiction.</span><span class="text-xs">Punctuation</span><span class="w-14 text-right text-xs">off</span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R14</span><span class="flex-1">Names and places must match the story bible.</span><span class="text-xs text-stone-400">Continuity</span><span class="w-14 text-right text-xs text-stone-400">0×</span></div>
+              <div class="flex items-center gap-3 px-3 py-2"><span class="text-stone-300">⋮⋮</span><input type="checkbox" checked class="accent-stone-900"><span class="w-8 font-mono text-xs text-stone-400">R15</span><span class="flex-1">If unsure whether something is deliberate, ask.</span><span class="text-xs text-stone-400">Meta</span><span class="w-14 text-right text-xs text-stone-400">0×</span></div>
+            </div>
+            <div class="flex items-center gap-3 border-t border-stone-200 bg-stone-50 px-3 py-2"><span class="w-8"></span><span class="input flex-1 py-1 text-stone-400">Add a rule… one line, Enter to save</span><span class="input w-28 py-1 text-stone-400">Tag</span></div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">Passes <span class="co">17</span></h3>
+          <div class="grid grid-cols-[14rem_1fr] gap-6">
+            <div class="space-y-1 text-sm">
+              <div class="rounded-md border border-stone-900 bg-white px-3 py-2 shadow-sm"><div class="flex items-center justify-between font-medium">Copy edit <span class="text-[10px] uppercase tracking-wide text-stone-400">primary</span></div><div class="text-xs text-stone-500">All rules + mechanics</div></div>
+              <div class="rounded-md border border-stone-200 bg-white px-3 py-2 text-stone-600">Proofread</div>
+              <div class="rounded-md border border-stone-200 bg-white px-3 py-2 text-stone-600">Line edit</div>
+              <div class="rounded-md border border-stone-200 bg-white px-3 py-2 text-stone-600">Tighten</div>
+              <div class="rounded-md border border-stone-200 bg-white px-3 py-2 text-stone-600">Read as a reader</div>
+              <div class="px-3 py-2 text-xs text-stone-400">+ New pass</div>
+            </div>
+            <div class="max-w-2xl space-y-3 text-sm">
+              <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4"><span class="text-stone-500">Name</span><span class="input">Copy edit</span></div>
+              <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4"><span class="text-stone-500">Rules</span><span class="flex gap-4"><label class="flex items-center gap-1.5"><input type="radio" checked class="accent-stone-900"> All enabled (14)</label><label class="flex items-center gap-1.5"><input type="radio"> By tag…</label><label class="flex items-center gap-1.5"><input type="radio"> None</label></span></div>
+              <div class="grid grid-cols-[8rem_1fr] items-start gap-x-4"><span class="pt-1.5 text-stone-500">Also check</span>
+                <div class="input min-h-[5.5rem] whitespace-pre-line leading-relaxed">Grammar, punctuation, usage, and consistency of names and hyphenation. Flag a sentence that can be misread. Do not rephrase for taste. Quote the smallest span that needs to change; one change per card.</div></div>
+              <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4"><span class="text-stone-500">May use</span><span class="flex flex-wrap gap-3"><label class="flex items-center gap-1.5"><input type="checkbox" checked class="accent-stone-900"> Suggest</label><label class="flex items-center gap-1.5"><input type="checkbox" checked class="accent-stone-900"> Cut</label><label class="flex items-center gap-1.5"><input type="checkbox" checked class="accent-stone-900"> Question</label><label class="flex items-center gap-1.5"><input type="checkbox" class="accent-stone-900"> Note</label><label class="flex items-center gap-1.5"><input type="checkbox" class="accent-stone-900"> Praise</label></span></div>
+              <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4"><span class="text-stone-500">Model</span><span class="input flex max-w-xs items-center justify-between">Account default <span class="text-stone-400">▾</span></span></div>
+              <div class="flex gap-2 pt-1"><span class="btn-primary btn-sm">Save</span><span class="btn btn-sm">Duplicate</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ol class="legend">
+    <li><span class="co">13</span>Account is the Codex CLI’s ChatGPT login. Sign-in inside the app uses the device-code flow; the app polls until Codex reports signed in.</li>
+    <li><span class="co">14</span>The rulebook: numbered one-liners, a free-text tag, an on/off switch, drag to reorder. Click a line to edit it in place; Enter saves.</li>
+    <li><span class="co">15</span>Fired counts (and dismissed counts on hover) accumulate across runs, so you can see which rules earn their keep.</li>
+    <li><span class="co">16</span>Paste a block of text, one rule per line, to add many at once. Export is the same format.</li>
+    <li><span class="co">17</span>Copy edit uses every enabled rule and can’t be told otherwise from the run menu. Other passes choose all, a tag, or none, and always get the rules as constraints.</li>
+  </ol>
+</section>
+
+<!-- ======================================================================= -->
+<section class="prose-doc border-t border-stone-200 pt-4">
+  <h2>How it would work</h2>
+  <p>The thesis stands: the model never edits the document. It proposes, in the vocabulary the sidebar already has, and every change goes through your hands. What changes in v2 is who runs the model and what the copy edit is checking against.</p>
+
+  <div class="flow my-6">
+    <div class="flow-step"><b>1 · Trigger</b>Pick pass, model, effort, scope. A revision is saved first. A run row is created and a background job starts.</div>
+    <div class="flow-step"><b>2 · Prompt</b>The numbered rulebook, the pass’s baseline instructions, house rules, and the document with numbered paragraphs.</div>
+    <div class="flow-step"><b>3 · Codex</b><code>codex exec</code> under your ChatGPT login, read-only sandbox, ephemeral, with a strict JSON output schema.</div>
+    <div class="flow-step"><b>4 · Anchor</b>Each finding names a paragraph, an exact quote, and a rule. The open editor places the highlight; misses become orphaned cards, nothing lost.</div>
+    <div class="flow-step"><b>5 · Act</b>Cards appear as windows return. Accept, edit, dismiss, or bulk-apply. Counts per rule update.</div>
+  </div>
+
+  <h3>Using your ChatGPT subscription</h3>
+  <p>Your machine already has Codex CLI 0.154.0 signed in with ChatGPT. The app treats it as the model runner rather than talking to OpenAI itself. Each run is one subprocess per document window:</p>
+<pre><code>codex exec --ephemeral --skip-git-repo-check -s read-only \
+  -m gpt-6-astra -c model_reasoning_effort=medium \
+  --output-schema findings.schema.json -o findings.json \
+  "&lt;prompt: rules, pass instructions, house rules&gt;"   &lt; document.txt</code></pre>
+  <p>The document is piped on stdin (Codex wraps it as a <code>&lt;stdin&gt;</code> block), the schema forces a valid JSON reply, and <code>--ephemeral</code> keeps the run out of Codex’s session history. Sign-in state is <code>codex login status</code>; signing in from the app runs <code>codex login --device-auth</code> and shows the code it prints. Model and effort are per-run flags, so a cheap fast model for proofreading and a strong one for line edits is a per-pass setting.</p>
+  <ul>
+    <li><strong>Why this and not our own OAuth:</strong> OpenAI’s ChatGPT sign-in is only supported through Codex. Reimplementing its token flow means an undocumented endpoint and a client id that isn’t ours; it works until it doesn’t. Driving the CLI stays inside the supported surface and inherits fixes when you run <code>codex update</code>.</li>
+    <li><strong>Trade-offs:</strong> Codex must be installed and signed in (it is). Usage counts against your plan’s limits; the run strip shows a clear message if a window is rate-limited, and the run resumes when you retry. Each window is a fresh session, which is what we want: no memory between runs.</li>
+    <li><strong>Provider interface stays:</strong> <code>CodexProvider</code> now; an API-key provider, Anthropic, or a local model is one class each, later, if ever.</li>
+  </ul>
+
+  <h3>The rulebook</h3>
+  <p>A rule is a row: number, one line of text, optional tag, enabled flag, sort order, and counters for fired and dismissed. The number is stable for the rule’s life, so cards and the editor’s letter can say “R7” and mean the same thing next month. Editing is inline HTMX: click to edit, Enter to save, drag to reorder, checkbox to disable without deleting. Import and export are plain text, one rule per line, so the rulebook can live in a note or a repo as well.</p>
+  <p>At run time the enabled rules are rendered into the prompt as a numbered list, and the schema’s <code>rule</code> field ties each finding back to one of them (or <code>null</code> for a general finding, which the pass can forbid). House rules that ride along with every pass: preserve the author’s voice; quote the smallest span; one change per card; never rewrite a whole paragraph unless the pass says so; if unsure whether something is deliberate, ask. The reply schema:</p>
+<pre><code>{
+  "summary": "Rules checked, which fired and how often, anything global",
+  "findings": [
+    {
+      "paragraph": 4,
+      "quote": "illuminated",
+      "rule": 3,                    // rule number, or null for a general finding
+      "kind": "suggest",            // one of the pass's allowed kinds
+      "replacement": "lit",         // required for suggest, null otherwise
+      "comment": "Rule 3: prefer the plain word.",
+      "confidence": "high"
+    }
+  ]
+}</code></pre>
+  <p>Long documents are split into ~1,500-word windows by paragraph, each its own Codex call with the full rulebook, so findings stream in and no window is too big to check carefully. Continuity-type rules (R14) get the whole document when it fits the budget.</p>
+
+  <h3>Anchoring findings to text</h3>
+  <p>Unchanged from v1. Models are bad at offsets and good at quoting, so each finding names a paragraph number and an exact quote. Placement happens in the live editor: exact match in the hinted paragraph, then exact unique match anywhere, then a normalised match (curly vs straight quotes, dashes, whitespace), then a fuzzy window match above a high threshold. Misses are kept as orphaned cards with quote, rule, and comment visible. Placing on the client means a pass can run while you keep typing, and a document opened later still receives its pending cards.</p>
+
+  <h3>Data model changes</h3>
+  <table>
+    <tr><th>Table</th><th>Change</th></tr>
+    <tr><td><code>rules</code></td><td>new: id, number, text, tag, enabled, sort_order, fired_count, dismissed_count, timestamps</td></tr>
+    <tr><td><code>passes</code></td><td>new: id, name, rule_mode (all / tag / none), rule_tag, instructions, allowed_kinds, general_findings (bool), model, effort, is_primary, sort_order</td></tr>
+    <tr><td><code>runs</code></td><td>new: id, document_id, pass_id, model, effort, scope, status (queued/running/done/failed/cancelled), revision_id, summary, rules_snapshot (the numbered list as sent), windows_total/done, error, timestamps</td></tr>
+    <tr><td><code>annotations</code></td><td>add run_id, author (you/ai), rule_id, paragraph_hint, confidence, dismiss_reason; new status <code>pending</code> for cards not yet placed in the text</td></tr>
+    <tr><td><code>settings</code></td><td>new key/value: default model, default effort, model list. No secrets; Codex holds the login.</td></tr>
+  </table>
+
+  <h3>UI changes</h3>
+  <ul>
+    <li>Header: “Edit pass” menu with Copy edit primary, other passes secondary, model and effort, scope, account line.</li>
+    <li>Sidebar: filter chips including “By rule”; run strip with polling and cancel; editor’s letter with the rule tally; rule chips on cards linking into the rulebook; bulk accept/dismiss.</li>
+    <li>Settings at <code>/settings</code>: Account (Codex status, sign-in by device code, defaults), Rules (the rulebook), Passes, Runs.</li>
+  </ul>
+
+  <h3>Phases</h3>
+  <ol>
+    <li><strong>Core</strong> (this approval): Codex provider with status and device sign-in; rulebook CRUD with import/export and counters; Copy edit pass wired to all enabled rules; run pipeline with windows and polling; client-side placement; author, rule chips and filters in the sidebar; editor’s letter; bulk actions.</li>
+    <li><strong>Next:</strong> dismiss reasons feeding per-rule dismissal counts and a “reword this rule?” nudge; selection-scoped runs from the bubble menu; “what this pass changed” diff; rule tags as filters in the run menu; other providers if wanted.</li>
+  </ol>
+
+  <h2>Decisions I need from you</h2>
+  <div class="decision"><b>A.</b> Findings land as the existing cards, placed by quote-matching in the live editor; the model never writes to the document directly. (Unchanged.)</div>
+  <div class="decision"><b>B.</b> The Codex CLI is the model runner, under your ChatGPT sign-in. No API key anywhere. Model and effort per run, defaults from your Codex config.</div>
+  <div class="decision"><b>C.</b> A single rulebook of one-line rules replaces editor profiles. Copy edit always checks every enabled rule plus baseline mechanics; other passes stay as optional presets that respect the rules.</div>
+  <div class="decision"><b>D.</b> A run saves a revision first, streams results by window through polling, and allows one active run per document. (Unchanged.)</div>
+  <p class="mt-6"><strong>Open questions:</strong> should general (non-rule) findings be on by default in Copy edit, or should it be rules-only until you say otherwise? Free-text tags or a fixed set? Keep the four secondary passes in the menu, or hide them until you ask? Default effort medium, or your Codex default of high?</p>
+</section>
+
+</main>
+</body>
+</html>

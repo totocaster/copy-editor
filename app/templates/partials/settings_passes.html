@@ -1,0 +1,45 @@
+<section class="grid grid-cols-[14rem_minmax(0,1fr)] gap-6">
+  <div class="space-y-1 text-sm">
+    {% for x in passes %}
+    <a href="/settings?tab=passes&id={{ x.id }}" hx-get="/settings/passes/{{ x.id }}" hx-target="#settings-main" hx-swap="innerHTML"
+       class="pass-item{% if p and x.id == p.id %} is-selected{% endif %}">
+      <div class="flex items-center justify-between font-medium">{{ x.name }}{% if x.is_primary %}<span class="text-[10px] uppercase tracking-wide text-stone-400">primary</span>{% endif %}</div>
+      {% if x.description %}<div class="text-xs text-stone-500">{{ x.description|excerpt(60) }}</div>{% endif %}
+    </a>
+    {% endfor %}
+    <button type="button" class="px-3 py-2 text-xs text-stone-400 hover:text-stone-900" hx-post="/settings/passes" hx-target="#settings-main" hx-swap="innerHTML">+ New pass</button>
+  </div>
+
+  {% if p %}
+  {% set kinds = p.allowed_kinds.split(',') %}
+  <form hx-put="/settings/passes/{{ p.id }}" hx-target="#settings-main" hx-swap="innerHTML" class="max-w-2xl space-y-3 text-sm">
+    <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4"><label class="text-stone-500" for="p-name">Name</label><input id="p-name" name="name" value="{{ p.name }}" class="input"></div>
+    <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4"><label class="text-stone-500" for="p-desc">Description</label><input id="p-desc" name="description" value="{{ p.description }}" class="input" placeholder="Shown in the run menu"></div>
+    <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4"><span class="text-stone-500">Rules</span>
+      <span class="flex flex-wrap items-center gap-4">
+        <label class="flex items-center gap-1.5"><input type="radio" name="rule_mode" value="all" class="accent-stone-900"{% if p.rule_mode == 'all' %} checked{% endif %}> All enabled</label>
+        <label class="flex items-center gap-1.5"><input type="radio" name="rule_mode" value="tag" class="accent-stone-900"{% if p.rule_mode == 'tag' %} checked{% endif %}> Tagged
+          <select name="rule_tag" class="input w-32 py-0.5">{% for t in tags %}<option value="{{ t }}"{% if t == p.rule_tag %} selected{% endif %}>{{ t }}</option>{% endfor %}{% if not tags %}<option value="">(no tags yet)</option>{% endif %}</select></label>
+        <label class="flex items-center gap-1.5"><input type="radio" name="rule_mode" value="none" class="accent-stone-900"{% if p.rule_mode == 'none' %} checked{% endif %}> None</label>
+      </span></div>
+    <div class="grid grid-cols-[8rem_1fr] items-start gap-x-4"><label class="pt-1.5 text-stone-500" for="p-instr">Instructions</label><textarea id="p-instr" name="instructions" rows="8" class="input leading-relaxed">{{ p.instructions }}</textarea></div>
+    <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4"><span class="text-stone-500">Beyond the rules</span>
+      <label class="flex items-center gap-1.5"><input type="checkbox" name="general_findings" value="1" class="accent-stone-900"{% if p.general_findings %} checked{% endif %}> Also report anything a professional would mark that no rule covers</label></div>
+    <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4"><span class="text-stone-500">May use</span>
+      <span class="flex flex-wrap gap-3">{% for key, k in KINDS.items() %}<label class="flex items-center gap-1.5"><input type="checkbox" name="allowed_kinds" value="{{ key }}" class="accent-stone-900"{% if key in kinds %} checked{% endif %}> {{ k.label }}</label>{% endfor %}</span></div>
+    <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4"><label class="text-stone-500" for="p-model">Model</label>
+      <span class="flex gap-2">
+        {% with name='pin', id='p-model', selected=(p.provider ~ ':' ~ p.model) if p.provider and p.model else '', allow_blank=True, blank_label='Account default', extra_class='max-w-xs' %}{% include "partials/model_select.html" %}{% endwith %}
+        <select name="effort" class="input w-40 py-1"><option value="">Default effort ({{ default_effort }})</option>{% for e in ALL_EFFORTS %}<option value="{{ e }}"{% if e == p.effort %} selected{% endif %}>{{ e }}</option>{% endfor %}</select>
+      </span></div>
+    <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4"><span class="text-stone-500">Primary</span>
+      <label class="flex items-center gap-1.5"><input type="checkbox" name="is_primary" value="1" class="accent-stone-900"{% if p.is_primary %} checked{% endif %}> Preselected in the run menu</label></div>
+    <div class="flex items-center gap-2 pt-1">
+      <button type="submit" class="btn-primary btn-sm">Save</button>
+      <button type="button" class="btn btn-sm" hx-post="/settings/passes/{{ p.id }}/duplicate" hx-target="#settings-main" hx-swap="innerHTML">Duplicate</button>
+      {% if not p.is_primary %}<button type="button" class="btn-ghost btn-sm" hx-delete="/settings/passes/{{ p.id }}" hx-confirm="Delete the “{{ p.name }}” pass?" hx-target="#settings-main" hx-swap="innerHTML">Delete</button>{% endif %}
+      {% if saved %}<span class="text-xs text-emerald-700">Saved</span>{% endif %}
+    </div>
+  </form>
+  {% endif %}
+</section>

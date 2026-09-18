@@ -1,0 +1,36 @@
+{% if error %}
+<div class="run-strip is-error">
+  <div class="flex items-start justify-between gap-3"><span>{{ error }}</span><button type="button" class="text-xs opacity-70 hover:opacity-100" onclick="this.closest('.run-strip').remove()">✕</button></div>
+</div>
+{% elif run %}
+{% set live = run.status in ('queued', 'running') %}
+{% set pct = (run.windows_done / run.windows_total * 100) if run.windows_total else 0 %}
+<div class="run-strip{% if live %} is-live{% else %} is-{{ run.status }}{% endif %}" data-run="{{ run.id }}" data-status="{{ run.status }}"
+     {% if live %}hx-get="/d/{{ doc.id }}/runs/{{ run.id }}/strip" hx-trigger="every 2s" hx-target="#run-strip" hx-swap="innerHTML"{% endif %}>
+  <script type="application/json" data-pending>{{ pending|tojson }}</script>
+  <div class="flex items-center justify-between gap-3">
+    <span class="font-medium">✦ {{ run.pass_name }} ·
+      {% if run.status == 'queued' %}starting{% elif run.status == 'running' %}running{% elif run.status == 'done' %}finished{% elif run.status == 'failed' %}failed{% else %}cancelled{% endif %}</span>
+    {% if live %}
+    <button type="button" class="text-xs opacity-70 hover:opacity-100" hx-post="/d/{{ doc.id }}/runs/{{ run.id }}/cancel" hx-target="#run-strip" hx-swap="innerHTML">Cancel</button>
+    {% else %}
+    <button type="button" class="text-xs opacity-70 hover:opacity-100" title="Hide" onclick="this.closest('.run-strip').remove()">✕</button>
+    {% endif %}
+  </div>
+  <div class="mt-0.5 text-xs opacity-80">
+    {{ run.model or provider_label(run.provider) }} · {{ run.effort }} · {{ run.findings_count }} finding{{ '' if run.findings_count == 1 else 's' }}{% if run.suppressed_count %} · {{ run.suppressed_count }} skipped as seen before{% endif %}{% if live and run.windows_total > 1 %} · part {{ [run.windows_done + 1, run.windows_total]|min }} of {{ run.windows_total }}{% endif %}
+  </div>
+  {% if live %}<div class="progress"><div style="width: {{ [pct, 6]|max }}%"></div></div>{% endif %}
+  {% if run.status == 'failed' and run.error %}<div class="mt-1.5 text-xs text-red-200">{{ run.error }}</div>{% endif %}
+  {% if run.status == 'done' and counts.open %}
+  <div class="mt-2 flex flex-wrap gap-1.5">
+    <button type="button" class="strip-btn" onclick="Workshop.acceptAll('{{ run.id }}')">Accept all remaining</button>
+    <button type="button" class="strip-btn" hx-post="/d/{{ doc.id }}/runs/{{ run.id }}/dismiss_all" hx-target="#sidebar-content" hx-swap="innerHTML"
+            hx-confirm="Dismiss the remaining findings from this pass? They will not be raised again.">Dismiss remaining</button>
+  </div>
+  {% endif %}
+  {% if run.summary %}
+  <details class="letter" open><summary>Editor’s letter</summary><p>{{ run.summary }}</p></details>
+  {% endif %}
+</div>
+{% endif %}

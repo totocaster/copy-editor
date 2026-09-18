@@ -1,0 +1,25 @@
+{% set open = annotations|selectattr("status", "in", ["open", "pending"])|list %}
+{% set closed = annotations|rejectattr("status", "in", ["open", "pending"])|list %}
+{% if oob_bar %}{% include "partials/sidebar_bar.html" %}{% endif %}
+<div id="annotation-layer" class="relative min-h-16">
+  {% for a in open %}
+    {% include "partials/annotation_card.html" %}
+  {% endfor %}
+  {% if not open %}
+    <p class="text-sm leading-relaxed text-stone-400">
+      Select some text and pick a kind of note, or run an editing pass from the header. Cards line up beside their highlights.
+    </p>
+  {% endif %}
+</div>
+{% if closed %}
+<details class="mt-8"{% if editing and editing in closed|map(attribute="id")|list %} open{% endif %}>
+  <summary class="cursor-pointer select-none text-xs uppercase tracking-wide text-stone-400 hover:text-stone-600">
+    Closed · {{ closed|length }}
+  </summary>
+  <div class="mt-3 space-y-2">
+    {% for a in closed %}
+      {% include "partials/annotation_card.html" %}
+    {% endfor %}
+  </div>
+</details>
+{% endif %}

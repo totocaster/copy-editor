@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}{{ doc.title }} · Write{% endblock %}
+{% block body %}
+{% from "partials/icons.html" import icon %}
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="/" class="icon-btn shrink-0" title="All documents" aria-label="All documents">{{ icon('back') }}</a>
+    <input id="title" name="title" value="{{ doc.title }}" placeholder="Untitled" autocomplete="off" spellcheck="false"
+           hx-put="/d/{{ doc.id }}/title" hx-trigger="change, keyup changed delay:600ms" hx-swap="none"
+           hx-on::after-request="document.title = (this.value.trim() || 'Untitled') + ' · Write'"
+           class="min-w-0 flex-1 truncate rounded bg-transparent px-1.5 py-0.5 text-lg font-medium outline-none placeholder:text-stone-300 focus:bg-white/70">
+    <div class="topbar-status">
+      <span id="save-status" data-state="saved">Saved</span>
+      <span aria-hidden="true">·</span>
+      <span><span id="word-count" class="tabular-nums">{{ doc.word_count }}</span> words</span>
+    </div>
+    <span class="topbar-divider" aria-hidden="true"></span>
+    <div class="flex shrink-0 items-center gap-1">
+      <div class="relative">
+        <button type="button" id="pass-menu-btn" class="btn h-8"
+                hx-get="/d/{{ doc.id }}/runs/menu" hx-target="#pass-menu" hx-swap="innerHTML"
+                hx-on::after-request="Workshop.openMenu()" title="Run an editing pass">✦ Edit pass</button>
+        <div id="pass-menu" class="popover w-[27rem]" hidden></div>
+      </div>
+      <button type="button" id="history-btn" class="icon-btn" title="History{% if latest_revision %} · revision {{ latest_revision.seq }}{% endif %} (H)" aria-label="History"
+              hx-get="/d/{{ doc.id }}/revisions" hx-target="#drawer-body" hx-swap="innerHTML"
+              hx-on::before-request="Workshop.openDrawer()">{{ icon('history') }}</button>
+      <div class="relative">
+        <button type="button" id="export-btn" class="icon-btn" onclick="Workshop.toggleExport()" title="Copy or download" aria-label="Export">{{ icon('export') }}</button>
+        <div id="export-menu" class="popover w-60" hidden>
+          <button type="button" class="menu-item text-sm" data-export="md" data-mode="copy">Copy as Markdown</button>
+          <button type="button" class="menu-item text-sm" data-export="txt" data-mode="copy">Copy as plain text</button>
+          <div class="my-1 border-t border-stone-100"></div>
+          <a href="/d/{{ doc.id }}/export.md" class="menu-item text-sm" data-export="md" data-mode="download">Download .md</a>
+          <a href="/d/{{ doc.id }}/export.txt" class="menu-item text-sm" data-export="txt" data-mode="download">Download .txt</a>
+        </div>
+      </div>
+      <button type="button" class="icon-btn" onclick="Workshop.toggleShortcuts()" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">{{ icon('keyboard') }}</button>
+      <a href="/settings" class="icon-btn" title="Settings" aria-label="Settings">{{ icon('settings') }}</a>
+    </div>
+  </div>
+</header>
+
+<main class="mx-auto grid max-w-[1280px] grid-cols-[minmax(0,1fr)_20rem] items-start gap-10 px-6 py-12">
+  <div id="editor-column" class="relative">
+    <div id="editor" class="prose prose-stone prose-lg mx-auto max-w-[68ch]"></div>
+
+    <div id="bubble-menu" class="bubble-menu" hidden>
+      <button type="button" data-cmd="toggleBold" data-mark="bold" title="Bold (⌘B)"><b>B</b></button>
+      <button type="button" data-cmd="toggleItalic" data-mark="italic" title="Italic (⌘I)"><i>I</i></button>
+      <button type="button" data-cmd="toggleStrike" data-mark="strike" title="Strikethrough (⌘⇧S)"><s>S</s></button>
+      <button type="button" data-cmd="toggleCode" data-mark="code" title="Code (⌘E)"><code>&lt;&gt;</code></button>
+      <span class="sep" aria-hidden="true"></span>
+      <button type="button" data-cmd="annotate" data-kind="note" title="Note to self on this passage (⌘⌥M)">
+        <span class="swatch" data-kind="note"></span>Note
+      </button>
+    </div>
+
+    <div id="slash-menu" class="slash-menu" hidden></div>
+  </div>
+
+  <aside id="sidebar" class="sidebar-panel">
+    {% include "partials/sidebar_bar.html" %}
+    <div id="run-strip">{% include "partials/run_strip.html" %}</div>
+    <div id="sidebar-content">
+      {% include "partials/sidebar.html" %}
+    </div>
+  </aside>
+</main>
+
+<svg id="connectors" class="connectors" aria-hidden="true"></svg>
+
+<dialog id="shortcuts" class="sheet" aria-label="Keyboard shortcuts">
+  <div class="flex items-center justify-between">
+    <h2 class="text-base font-medium">Keyboard shortcuts</h2>
+    <button type="button" class="icon-btn" onclick="this.closest('dialog').close()" aria-label="Close">✕</button>
+  </div>
+  <div class="mt-4 grid gap-x-10 gap-y-6 sm:grid-cols-2">
+    <section>
+      <h3>Writing</h3>
+      <dl>
+        <div><dt>Bold, italic</dt><dd><kbd data-mod>⌘</kbd><kbd>B</kbd> <kbd data-mod>⌘</kbd><kbd>I</kbd></dd></div>
+        <div><dt>Block menu</dt><dd><kbd>/</kbd></dd></div>
+        <div><dt>Note on the selection</dt><dd><kbd data-mod>⌘</kbd><kbd data-alt>⌥</kbd><kbd>M</kbd></dd></div>
+        <div><dt>Save now</dt><dd><kbd data-mod>⌘</kbd><kbd>S</kbd></dd></div>
+      </dl>
+    </section>
+    <section>
+      <h3>Notes and findings</h3>
+      <dl>
+        <div><dt>Next, previous</dt><dd><kbd data-alt>⌥</kbd><kbd>↓</kbd> <kbd data-alt>⌥</kbd><kbd>↑</kbd> <span class="or">or</span> <kbd>J</kbd> <kbd>K</kbd></dd></div>
+        <div><dt>Accept suggestion or cut</dt><dd><kbd data-alt>⌥</kbd><kbd>↵</kbd> <span class="or">or</span> <kbd>A</kbd></dd></div>
+        <div><dt>Resolve</dt><dd><kbd>R</kbd></dd></div>
+        <div><dt>Dismiss, choose a reason</dt><dd><kbd>X</kbd></dd></div>
+        <div><dt>Edit your note</dt><dd><kbd>E</kbd></dd></div>
+        <div><dt>Deselect, close menus</dt><dd><kbd>Esc</kbd></dd></div>
+      </dl>
+    </section>
+    <section>
+      <h3>Tools</h3>
+      <dl>
+        <div><dt>Edit pass menu</dt><dd><kbd>P</kbd></dd></div>
+        <div><dt>History</dt><dd><kbd>H</kbd></dd></div>
+        <div><dt>This sheet</dt><dd><kbd>?</kbd></dd></div>
+      </dl>
+    </section>
+  </div>
+  <p class="mt-5 text-xs text-stone-400">Single letters work when the cursor isn't in the text. The <kbd data-alt>⌥</kbd> shortcuts work anywhere.</p>
+</dialog>
+
+<div id="drawer" class="drawer" hidden>
+  <div class="drawer-backdrop" onclick="Workshop.closeDrawer()"></div>
+  <div class="drawer-panel" role="dialog" aria-label="Revision history">
+    <div class="flex h-14 shrink-0 items-center justify-between border-b border-stone-200 px-5">
+      <h2 class="font-medium">History</h2>
+      <button type="button" class="btn-ghost btn-sm" onclick="Workshop.closeDrawer()" aria-label="Close">✕</button>
+    </div>
+    <div id="drawer-body" class="min-h-0 flex-1 overflow-y-auto"></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script id="workshop-data" type="application/json">{{ {"docId": doc.id, "content": content, "openIds": open_ids, "pending": pending}|tojson }}</script>
+<script src="{{ asset('js/editor.js') }}" defer></script>
+{% endblock %}

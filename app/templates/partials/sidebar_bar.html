@@ -1,0 +1,26 @@
+{% from "partials/icons.html" import icon %}
+{% set open = annotations|selectattr("status", "in", ["open", "pending"])|list %}
+{% set ai_runs = [] %}
+{% for a in open if a.author == 'ai' and a.run_id and a.run_id not in ai_runs %}{% set _ = ai_runs.append(a.run_id) %}{% endfor %}
+<div id="sidebar-bar" class="sidebar-bar"{% if oob_bar %} hx-swap-oob="true"{% endif %}{% if not open %} hidden{% endif %}>
+  {% set yours = open|selectattr("author", "equalto", "you")|list|length %}
+  {% set sources = ai_runs|length + (1 if yours else 0) %}
+  <div id="ann-filters" class="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+    {% if sources > 1 %}
+      <button type="button" class="chip" data-filter="all">All {{ open|length }}</button>
+      {% if yours %}<button type="button" class="chip" data-filter="you">Yours {{ yours }}</button>{% endif %}
+      {% for rid in ai_runs %}
+      <button type="button" class="chip" data-filter="run:{{ rid }}">✦ {{ runs_by_id[rid].pass_name if rid in runs_by_id else 'Pass' }} {{ open|selectattr("run_id", "equalto", rid)|list|length }}</button>
+      {% endfor %}
+    {% elif ai_runs %}
+      <span class="text-xs text-stone-500">{{ open|length }} finding{{ '' if open|length == 1 else 's' }} <span class="text-stone-400">· ✦ {{ runs_by_id[ai_runs[0]].pass_name if ai_runs[0] in runs_by_id else 'Pass' }}</span></span>
+    {% else %}
+      <span class="text-xs text-stone-500">{{ open|length }} note{{ '' if open|length == 1 else 's' }}</span>
+    {% endif %}
+  </div>
+  <div id="ann-nav" class="flex shrink-0 items-center">
+    <button type="button" id="ann-prev" class="icon-btn h-7 w-7" title="Previous (⌥↑ or K)" aria-label="Previous annotation">{{ icon('prev', 14) }}</button>
+    <span id="ann-counter" class="min-w-[2.75rem] text-center text-xs tabular-nums text-stone-500">0</span>
+    <button type="button" id="ann-next" class="icon-btn h-7 w-7" title="Next (⌥↓ or J)" aria-label="Next annotation">{{ icon('next', 14) }}</button>
+  </div>
+</div>

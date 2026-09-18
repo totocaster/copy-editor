@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Documents · Write{% endblock %}
+{% block body %}
+<main class="mx-auto max-w-3xl px-6 py-16">
+  <header class="mb-10 flex items-end justify-between gap-6">
+    <div>
+      <h1 class="text-3xl font-semibold tracking-tight">Documents</h1>
+      <p class="mt-1 text-stone-500">Drafts, editing passes, and every revision along the way.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/settings" class="btn">Settings</a>
+      <form hx-post="/documents" hx-swap="none">
+        <button type="submit" class="btn-primary">New document</button>
+      </form>
+    </div>
+  </header>
+
+  <ul id="documents" class="divide-y divide-stone-200 border-y border-stone-200">
+    {% for d in documents %}
+      {% include "partials/document_row.html" %}
+    {% else %}
+      <li class="py-16 text-center text-stone-400">No documents yet. Start one above.</li>
+    {% endfor %}
+  </ul>
+</main>
+{% endblock %}

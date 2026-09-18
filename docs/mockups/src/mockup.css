@@ -1,0 +1,36 @@
+@import "../../../frontend/app.css";
+@source "./";
+
+/* Mockup-only helpers */
+.co {
+  @apply inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-stone-900 px-1 align-middle text-[10px] font-semibold text-white;
+  box-shadow: 0 0 0 2px white;
+}
+.screen { @apply overflow-hidden rounded-xl border border-stone-200 bg-stone-50 shadow-sm; }
+.legend { @apply mt-4 grid gap-x-8 gap-y-2 text-sm text-stone-600 sm:grid-cols-2; }
+.legend li { @apply flex gap-2; }
+.ai-chip {
+  @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide;
+  background: var(--color-stone-900); color: white;
+}
+.you-chip { @apply inline-flex items-center rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-500; }
+.chip { @apply inline-flex items-center gap-1 rounded-full border border-stone-200 bg-white px-2.5 py-0.5 text-xs text-stone-600; }
+.chip.is-on { @apply border-stone-900 bg-stone-900 text-white; }
+.menu-item { @apply flex w-full items-start gap-3 rounded-md px-2.5 py-2 text-left hover:bg-stone-100; }
+.menu-item.is-selected { @apply bg-stone-100; }
+.flow { @apply grid gap-3 md:grid-cols-5; }
+.flow-step { @apply rounded-lg border border-stone-200 bg-white p-3 text-sm; }
+.flow-step b { @apply mb-1 block text-xs uppercase tracking-wide text-stone-400; }
+.prose-doc h2 { @apply mt-12 mb-3 text-xl font-semibold tracking-tight; }
+.prose-doc h3 { @apply mt-8 mb-2 text-base font-semibold; }
+.prose-doc p { @apply my-3 leading-relaxed text-stone-700; }
+.prose-doc table { @apply my-4 w-full text-sm; }
+.prose-doc th { @apply border-b border-stone-300 py-1.5 text-left font-medium text-stone-500; }
+.prose-doc td { @apply border-b border-stone-100 py-1.5 align-top text-stone-700; }
+.prose-doc code { @apply rounded bg-stone-100 px-1 py-0.5 font-mono text-[0.85em] text-stone-800; }
+.prose-doc pre { @apply my-3 overflow-x-auto rounded-lg bg-stone-900 p-4 font-mono text-xs leading-relaxed text-stone-100; }
+.prose-doc pre code { @apply bg-transparent p-0 text-inherit; }
+.prose-doc ul { @apply my-3 list-disc space-y-1 pl-5 text-stone-700; }
+.prose-doc ol { @apply my-3 list-decimal space-y-1 pl-5 text-stone-700; }
+.decision { @apply my-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-stone-800; }
+.decision b { @apply text-amber-900; }

@@ -1,0 +1,30 @@
+{
+  "name": "write",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Writing workshop tool: prose editor with annotations and revisions",
+  "scripts": {
+    "vendor": "cp node_modules/htmx.org/dist/htmx.min.js app/static/js/htmx.min.js",
+    "build:css": "tailwindcss -i frontend/app.css -o app/static/css/app.css --minify",
+    "build:js": "esbuild frontend/editor.js --bundle --format=iife --target=es2020 --minify --sourcemap --outfile=app/static/js/editor.js",
+    "build": "npm run vendor && npm run build:css && npm run build:js",
+    "watch:css": "tailwindcss -i frontend/app.css -o app/static/css/app.css --watch",
+    "watch:js": "esbuild frontend/editor.js --bundle --format=iife --target=es2020 --sourcemap --outfile=app/static/js/editor.js --watch",
+    "dev": "npm run vendor && (npm run watch:css & npm run watch:js & wait)"
+  },
+  "dependencies": {
+    "@tiptap/core": "^3.31.3",
+    "@tiptap/extension-typography": "^3.31.3",
+    "@tiptap/extensions": "^3.31.3",
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
+    "@tiptap/suggestion": "^3.31.3",
+    "htmx.org": "^2.0.10"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/typography": "^0.5.20",
+    "esbuild": "^0.28.2",
+    "tailwindcss": "^4.3.3"
+  }
+}

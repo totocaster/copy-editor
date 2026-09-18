@@ -1,0 +1,22 @@
+<section>
+  <h2 class="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">Runs</h2>
+  {% if runs %}
+  <table class="w-full text-sm">
+    <thead><tr class="text-left text-xs text-stone-400"><th class="py-1.5 font-medium">When</th><th class="py-1.5 font-medium">Document</th><th class="py-1.5 font-medium">Pass</th><th class="py-1.5 font-medium">Model</th><th class="py-1.5 font-medium">Status</th><th class="py-1.5 text-right font-medium">Findings</th></tr></thead>
+    <tbody class="divide-y divide-stone-100">
+      {% for r in runs %}
+      <tr>
+        <td class="py-1.5 text-stone-500" title="{{ r.created_at|fmt_dt }}">{{ r.created_at|ago }}</td>
+        <td class="py-1.5"><a href="/d/{{ r.document_id }}" class="hover:underline">{{ r.doc_title }}</a></td>
+        <td class="py-1.5">{{ r.pass_name }}</td>
+        <td class="py-1.5 text-stone-500">{{ provider_label(r.provider) }} · {{ r.model or 'default' }} · {{ r.effort }}</td>
+        <td class="py-1.5">{{ r.status }}{% if r.error %} <span class="text-xs text-red-600" title="{{ r.error }}">error</span>{% endif %}</td>
+        <td class="py-1.5 text-right tabular-nums">{{ r.findings_count }}{% if r.suppressed_count %} <span class="text-xs text-stone-400">(+{{ r.suppressed_count }} skipped)</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="text-sm text-stone-400">No passes have run yet.</p>
+  {% endif %}
+</section>

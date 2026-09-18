@@ -1,0 +1,18 @@
+<form hx-post="/d/{{ doc.id }}/revisions" hx-target="#drawer-body" hx-swap="innerHTML"
+      class="space-y-3 border-b border-stone-200 bg-white px-5 py-4">
+  <p class="text-sm text-stone-600">
+    {% if dirty %}The document has changed since the last saved revision.{% else %}The latest revision matches the current text.{% endif %}
+  </p>
+  <input name="note" placeholder="What changed? (optional)" class="input" autocomplete="off">
+  <div class="flex items-center justify-between gap-3">
+    <label class="flex items-center gap-2 text-sm text-stone-700">
+      <input type="checkbox" name="is_major" value="1" class="accent-stone-900"> Flag as major revision
+    </label>
+    <button type="submit" class="btn-primary btn-sm">Save revision</button>
+  </div>
+</form>
+<ol class="divide-y divide-stone-100">
+  {% for r in revisions %}
+    {% include "partials/revision_row.html" %}
+  {% endfor %}
+</ol>

@@ -1,0 +1,69 @@
+<section class="max-w-2xl space-y-8"
+         {% if login_active %}hx-get="/settings/account/status" hx-trigger="every 2s" hx-target="#settings-main" hx-swap="innerHTML"{% endif %}>
+  <div>
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="text-xs font-semibold uppercase tracking-wide text-stone-400">Accounts</h2>
+      <button type="button" class="btn-ghost btn-sm" hx-get="/settings/account/status?force=1" hx-target="#settings-main">Re-check</button>
+    </div>
+    <p class="mb-3 text-sm text-stone-500">Passes run through the command-line tools already signed in on this machine, under your subscriptions. No API keys.</p>
+    <div class="space-y-3">
+      {% for g in groups %}
+      {% set login = logins[g.id] %}
+      <div class="card">
+        <div class="flex items-center gap-3">
+          <span class="h-2 w-2 shrink-0 rounded-full {{ 'bg-emerald-500' if g.status.signed_in else 'bg-stone-300' }}"></span>
+          <div class="min-w-0 flex-1">
+            <div class="font-medium">{{ g.label }}</div>
+            <div class="text-xs text-stone-500">
+              {% if not g.status.installed %}{{ g.status.message }}
+              {% elif g.status.signed_in %}{{ g.status.message }}{% if g.status.version %} · CLI {{ g.status.version }}{% endif %} · {{ g.models|length }} model{{ '' if g.models|length == 1 else 's' }} available
+              {% else %}Not signed in{% if g.status.version %} · CLI {{ g.status.version }}{% endif %}{% endif %}
+            </div>
+          </div>
+          {% if g.status.installed and g.status.signed_in %}
+          <button type="button" class="btn-ghost btn-sm" hx-post="/settings/account/{{ g.id }}/logout" hx-target="#settings-main"
+                  hx-confirm="Sign out of {{ provider_label(g.id) }}? Passes on it stop working until you sign in again.">Sign out</button>
+          {% elif g.status.installed and not login.active %}
+          <button type="button" class="btn-primary btn-sm" hx-post="/settings/account/{{ g.id }}/login" hx-target="#settings-main">Sign in</button>
+          {% endif %}
+        </div>
+        {% if login.active %}
+        <div class="mt-3 rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm">
+          {% if login.url %}Open <a href="{{ login.url }}" target="_blank" rel="noopener" class="underline">{{ login.url }}</a>{% if login.code %} and enter <b class="font-mono">{{ login.code }}</b>{% endif %}. This page updates when the sign-in completes.
+          {% else %}Starting the sign-in… if a browser window opened, finish there.{% endif %}
+          <button type="button" class="btn-ghost btn-sm ml-2" hx-post="/settings/account/{{ g.id }}/login/cancel" hx-target="#settings-main">Cancel</button>
+        </div>
+        {% elif login.error %}
+        <div class="mt-2 text-xs text-red-600">{{ login.error }}</div>
+        {% endif %}
+        {% if g.models %}
+        <ul class="mt-3 divide-y divide-stone-100 text-sm">
+          {% for m in g.models %}
+          <li class="flex items-baseline gap-3 py-1.5">
+            <span class="w-40 shrink-0 font-medium text-stone-800">{{ m.label }}</span>
+            <span class="text-stone-500">{{ m.description }}</span>
+            <span class="ml-auto shrink-0 text-xs text-stone-400" title="Reasoning levels">{{ m.efforts|join(' · ') }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <form hx-put="/settings/account/defaults" hx-target="#settings-main" hx-swap="innerHTML" class="space-y-3">
+    <h2 class="text-xs font-semibold uppercase tracking-wide text-stone-400">Defaults for passes</h2>
+    <div class="grid grid-cols-[8rem_1fr] items-center gap-x-4 gap-y-3 text-sm">
+      <label class="text-stone-500" for="default_choice">Model</label>
+      <div class="max-w-sm">{% with name='default_choice', id='default_choice', selected=default_choice %}{% include "partials/model_select.html" %}{% endwith %}</div>
+      <label class="text-stone-500" for="default_effort">Reasoning effort</label>
+      <select id="default_effort" name="default_effort" class="input max-w-[10rem] py-1">
+        {% for e in ALL_EFFORTS %}<option value="{{ e }}"{% if e == default_effort %} selected{% endif %}>{{ e }}</option>{% endfor %}
+      </select>
+      <span></span>
+      <p class="text-xs text-stone-400">Applied when a pass has no pin. Levels a model doesn't support fall back to its own default. Your Codex config uses {{ config_model or 'its default' }}{% if config_effort %} at {{ config_effort }}{% endif %}.</p>
+    </div>
+    <div class="flex items-center gap-3"><button type="submit" class="btn-primary btn-sm">Save</button>{% if saved %}<span class="text-xs text-emerald-700">Saved</span>{% endif %}</div>
+  </form>
+</section>

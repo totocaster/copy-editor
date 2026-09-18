@@ -1,0 +1,59 @@
+{% set checked_id = (passes|selectattr('is_primary')|map(attribute='id')|list|first) or (passes[0].id if passes else '') %}
+<form hx-post="/d/{{ doc.id }}/runs" hx-target="#run-strip" hx-swap="innerHTML" hx-on::after-request="Workshop.closeMenu()" class="space-y-1">
+  {% for p in passes %}
+  <label class="menu-item">
+    <input type="radio" name="pass_id" value="{{ p.id }}" class="mt-1 accent-stone-900"{% if p.id == checked_id %} checked{% endif %}
+           data-pin="{{ (p.provider ~ ':' ~ p.model) if p.provider and p.model else '' }}" data-effort="{{ p.effort }}">
+    <span class="min-w-0 flex-1">
+      <span class="flex items-center justify-between text-sm font-medium">{{ p.name }}
+        {% if p.rule_mode != 'none' %}<span class="text-[10px] font-semibold uppercase tracking-wide text-stone-400">{{ rule_count }} rule{{ '' if rule_count == 1 else 's' }}</span>{% endif %}</span>
+      {% if p.description %}<span class="block text-xs text-stone-500">{{ p.description }}</span>{% endif %}
+    </span>
+  </label>
+  {% endfor %}
+  <div class="space-y-2 border-t border-stone-100 px-2.5 pt-3 text-sm">
+    <div class="grid grid-cols-[3.5rem_1fr_3.5rem_6rem] items-center gap-2">
+      <label class="text-xs text-stone-500" for="run-choice">Model</label>
+      {% with name='choice', id='run-choice', selected=default_choice %}{% include "partials/model_select.html" %}{% endwith %}
+      <label class="text-right text-xs text-stone-500" for="run-effort">Effort</label>
+      <select id="run-effort" name="effort" class="input py-1">{% for e in EFFORTS %}<option value="{{ e }}"{% if e == default_effort %} selected{% endif %}>{{ e }}</option>{% endfor %}</select>
+    </div>
+    <label class="flex items-center gap-2 text-xs text-stone-600"><input type="checkbox" name="snapshot" value="1" checked class="accent-stone-900"> Save a revision before running</label>
+    <div class="flex items-center justify-between pt-1">
+      <button type="submit" class="btn-primary btn-sm"{% if active or not any_signed_in %} disabled{% endif %}>{% if active %}A pass is running{% else %}Run pass{% endif %}</button>
+      <a href="/settings?tab=rules" class="text-xs text-stone-500 hover:text-stone-900">Edit rules…</a>
+    </div>
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-stone-100 pt-2 text-[11px] text-stone-500">
+      {% for g in groups %}
+      <span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full {{ 'bg-emerald-500' if g.status.signed_in else 'bg-stone-300' }}"></span>{{ provider_label(g.id) }}{% if not g.status.installed %} not installed{% elif not g.status.signed_in %} not signed in{% endif %}</span>
+      {% endfor %}
+      <a href="/settings?tab=account" class="underline">Account</a>
+    </div>
+  </div>
+</form>
+<script>
+(() => {
+  const efforts = {{ efforts|tojson }};
+  const preferred = {{ default_effort|tojson }};
+  const choice = document.getElementById('run-choice');
+  const effort = document.getElementById('run-effort');
+  const syncEffort = (want) => {
+    const info = efforts[choice.value];
+    if (!info) return;
+    const current = want || effort.value;
+    effort.innerHTML = info.levels.map((l) => `<option value="${l}">${l}</option>`).join('');
+    effort.value = info.levels.includes(current) ? current : info.levels.includes(preferred) ? preferred : info.default;
+  };
+  choice.addEventListener('change', () => syncEffort());
+  document.querySelectorAll('#pass-menu input[name=pass_id]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      const pin = radio.dataset.pin;
+      if (pin && [...choice.options].some((o) => o.value === pin && !o.disabled)) choice.value = pin;
+      syncEffort(radio.dataset.effort || '');
+    });
+  });
+  const checked = document.querySelector('#pass-menu input[name=pass_id]:checked');
+  if (checked && checked.dataset.pin && [...choice.options].some((o) => o.value === checked.dataset.pin && !o.disabled)) choice.value = checked.dataset.pin;
+  syncEffort(checked ? checked.dataset.effort || '' : '');
+})();
+</script>

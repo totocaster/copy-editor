@@ -1,0 +1,30 @@
+<section class="max-w-3xl">
+  <div class="mb-3 flex items-center justify-between">
+    <h2 class="text-xs font-semibold uppercase tracking-wide text-stone-400">Rules · {{ enabled_count }} on · {{ rules|length - enabled_count }} off</h2>
+    <div class="flex gap-3 text-xs text-stone-500">
+      <a href="/settings/rules/export" class="hover:text-stone-900">Export</a>
+      <a href="#import" class="hover:text-stone-900" onclick="document.getElementById('import').open = true">Import</a>
+    </div>
+  </div>
+  <p class="mb-3 text-sm text-stone-500">One line each, in your words. Every enabled rule is checked on every copy edit, and findings name the rule they came from. Edit a line in place; changes save when you leave the field.</p>
+  <div class="overflow-hidden rounded-lg border border-stone-200 bg-white">
+    <div id="rules-list" class="divide-y divide-stone-100">
+      {% for r in rules %}{% include "partials/rule_row.html" %}{% endfor %}
+      {% if not rules %}<p class="px-3 py-6 text-center text-sm text-stone-400">No rules yet. Add the first one below.</p>{% endif %}
+    </div>
+    <form hx-post="/settings/rules" hx-target="#settings-main" hx-swap="innerHTML"
+          class="flex items-center gap-2 border-t border-stone-200 bg-stone-50 px-3 py-2">
+      <span class="hidden w-14 shrink-0 md:block"></span>
+      <input name="text" class="input min-w-0 flex-1 py-1" placeholder="Add a rule… one line, Enter to save" autocomplete="off" required{% if focus_add %} autofocus{% endif %}>
+      <input name="tag" class="input w-24 shrink-0 py-1" placeholder="Tag" autocomplete="off">
+      <button type="submit" class="btn-primary btn-sm shrink-0">Add</button>
+    </form>
+  </div>
+  <details id="import" class="mt-4 rounded-lg border border-dashed border-stone-300 px-3 py-2 text-sm"{% if imported is defined %} open{% endif %}>
+    <summary class="cursor-pointer text-stone-600">Import from text</summary>
+    <form hx-post="/settings/rules/import" hx-target="#settings-main" hx-swap="innerHTML" class="mt-2 space-y-2">
+      <textarea name="text" rows="6" class="input font-mono text-xs" placeholder="One rule per line. Start a line with Tag: to set its tag. Lines you already have are skipped."></textarea>
+      <div class="flex items-center gap-3"><button type="submit" class="btn btn-sm">Import</button>{% if imported is defined %}<span class="text-xs text-emerald-700">Added {{ imported }} rule{{ '' if imported == 1 else 's' }}</span>{% endif %}</div>
+    </form>
+  </details>
+</section>

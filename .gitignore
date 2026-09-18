@@ -1,0 +1,12 @@
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+data/*.db*
+app/static/css/app.css
+app/static/js/editor.js
+app/static/js/editor.js.map
+app/static/js/htmx.min.js
+.pytest_cache/
+.DS_Store
+docs/mockups/src/mockup.built.css
