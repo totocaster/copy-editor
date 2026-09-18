@@ -1,12 +1,46 @@
+# Python
 .venv/
-node_modules/
 __pycache__/
-*.pyc
-data/*.db*
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Built assets (rebuilt by `make build` / `ce`)
 app/static/css/app.css
 app/static/js/editor.js
 app/static/js/editor.js.map
 app/static/js/htmx.min.js
-.pytest_cache/
-.DS_Store
 docs/mockups/src/mockup.built.css
+
+# Local data
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environment and secrets
+.env
+.env.*
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code local settings (launch.json is shared)
+.claude/settings.local.json

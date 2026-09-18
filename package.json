@@ -1,8 +1,8 @@
 {
-  "name": "write",
+  "name": "copy-editor",
   "version": "0.1.0",
   "private": true,
-  "description": "Writing workshop tool: prose editor with annotations and revisions",
+  "description": "Copy Editor: a workshop tool for prose with AI editing passes, annotations and revisions",
   "scripts": {
     "vendor": "cp node_modules/htmx.org/dist/htmx.min.js app/static/js/htmx.min.js",
     "build:css": "tailwindcss -i frontend/app.css -o app/static/css/app.css --minify",

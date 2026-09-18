@@ -1,4 +1,4 @@
-.PHONY: setup build dev run seed test
+.PHONY: setup build dev run seed test cli
 
 setup:        ## install Python and Node dependencies
 	uv sync --group dev
@@ -20,3 +20,6 @@ seed:         ## insert a sample document with annotations
 
 test:
 	uv run pytest -q
+
+cli:          ## put the `ce` launcher on your PATH (symlink in ~/.local/bin)
+	mkdir -p ~/.local/bin && ln -sf "$(CURDIR)/bin/ce" ~/.local/bin/ce && echo "installed ~/.local/bin/ce"

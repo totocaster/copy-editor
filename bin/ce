@@ -1,0 +1,92 @@
+#!/bin/zsh
+# ce — start Copy Editor and print its address. Ctrl+C stops it.
+#
+# Works from any directory (resolves its own symlink), installs dependencies on
+# first run, rebuilds the CSS/JS bundle when sources changed, and moves to the
+# next free port if the requested one is busy with something else.
+
+emulate -L zsh
+set -euo pipefail
+
+ROOT="${0:A:h:h}"
+PORT=8000
+OPEN=0
+
+usage() {
+  cat <<EOF
+usage: ce [--port N] [--open]
+
+Starts Copy Editor from $ROOT and prints its address. Ctrl+C stops it.
+
+  -p, --port N   listen on port N (default 8000; if busy, the next free one)
+  -o, --open     also open it in your browser
+  -h, --help     this message
+EOF
+}
+
+while (( $# )); do
+  case "$1" in
+    -p|--port) PORT="$2"; shift 2 ;;
+    -o|--open) OPEN=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) print -u2 "ce: unknown option $1"; usage >&2; exit 2 ;;
+  esac
+done
+
+cd "$ROOT"
+
+link() { printf '\e]8;;%s\e\\%s\e]8;;\e\\' "$1" "$1"; }
+port_busy() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
+is_copy_editor() { curl -sf -m 2 "http://localhost:$1/" 2>/dev/null | grep -q "Documents · Copy Editor"; }
+
+# --- dependencies and build -------------------------------------------------
+[[ -d .venv ]] || { print "ce: installing Python dependencies…"; uv sync --quiet; }
+[[ -d node_modules ]] || { print "ce: installing Node dependencies…"; npm install --silent; }
+needs_build=0
+for out in app/static/css/app.css app/static/js/editor.js app/static/js/htmx.min.js; do
+  [[ -f $out ]] || needs_build=1
+done
+if (( ! needs_build )); then
+  [[ -n "$(find frontend app/templates -type f -newer app/static/css/app.css -print -quit)" ]] && needs_build=1
+  [[ -n "$(find frontend -type f -newer app/static/js/editor.js -print -quit)" ]] && needs_build=1
+fi
+if (( needs_build )); then
+  print "ce: building assets…"
+  build_log="$(mktemp -t ce-build)"
+  if ! npm run build --silent >"$build_log" 2>&1; then
+    cat "$build_log" >&2
+    rm -f "$build_log"
+    print -u2 "ce: build failed"
+    exit 1
+  fi
+  rm -f "$build_log"
+fi
+
+# --- port ---------------------------------------------------------------------
+if port_busy "$PORT"; then
+  if is_copy_editor "$PORT"; then
+    print -P "Copy Editor is already running at %B$(link "http://localhost:$PORT")%b"
+    (( OPEN )) && open "http://localhost:$PORT"
+    exit 0
+  fi
+  first=$PORT
+  while port_busy "$PORT" && (( PORT < first + 20 )); do (( PORT++ )); done
+  print "ce: port $first is busy, using $PORT"
+fi
+URL="http://localhost:$PORT"
+
+# --- run ----------------------------------------------------------------------
+uv run uvicorn app.main:app --host 127.0.0.1 --port "$PORT" --log-level warning --no-access-log &
+pid=$!
+stop() { kill -INT "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; print; print "ce: stopped"; exit 0; }
+trap stop INT TERM
+
+for _ in {1..150}; do
+  curl -sf -m 1 "$URL/" >/dev/null 2>&1 && break
+  if ! kill -0 "$pid" 2>/dev/null; then print -u2 "ce: the server exited during startup"; exit 1; fi
+  sleep 0.1
+done
+
+print -P "Copy Editor is running at %B$(link "$URL")%b   (Ctrl+C to stop)"
+(( OPEN )) && open "$URL"
+wait "$pid" || true
