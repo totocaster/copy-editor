@@ -6,8 +6,6 @@
   <div class="topbar-inner">
     <a href="/" class="icon-btn shrink-0" title="All documents" aria-label="All documents">{{ icon('back') }}</a>
     <input id="title" name="title" value="{{ doc.title }}" placeholder="Untitled" autocomplete="off" spellcheck="false"
-           hx-put="/d/{{ doc.id }}/title" hx-trigger="change, keyup changed delay:600ms" hx-swap="none"
-           hx-on::after-request="document.title = (this.value.trim() || 'Untitled') + ' · Copy Editor'"
            class="min-w-0 flex-1 truncate rounded bg-transparent px-1.5 py-0.5 text-lg font-medium outline-none placeholder:text-stone-300 focus:bg-white/70">
     <div class="topbar-status">
       <span id="save-status" data-state="saved">Saved</span>
@@ -40,6 +38,14 @@
     </div>
   </div>
 </header>
+
+<div id="save-alert" class="save-alert" role="alert" hidden>
+  <span id="save-alert-text"></span>
+  <button type="button" id="retry-save" class="btn btn-sm" hidden>Retry save</button>
+  <button type="button" id="replace-server" class="btn btn-sm" hidden>Replace saved version</button>
+  <button type="button" id="load-server" class="btn btn-sm" hidden>Load saved version</button>
+</div>
+<div id="draft-panel" class="save-alert" role="status" hidden></div>
 
 <main class="mx-auto grid max-w-[1280px] grid-cols-[minmax(0,1fr)_20rem] items-start gap-10 px-6 py-12">
   <div id="editor-column" class="relative">
@@ -120,6 +126,6 @@
 </div>
 {% endblock %}
 {% block scripts %}
-<script id="workshop-data" type="application/json">{{ {"docId": doc.id, "content": content, "openIds": open_ids, "pending": pending}|tojson }}</script>
+<script id="workshop-data" type="application/json">{{ {"docId": doc.id, "content": content, "version": doc.version, "title": doc.title, "openIds": open_ids, "pending": pending}|tojson }}</script>
 <script src="{{ asset('js/editor.js') }}" defer></script>
 {% endblock %}

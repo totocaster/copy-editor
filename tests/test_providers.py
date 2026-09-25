@@ -1,4 +1,5 @@
 import json
+import threading
 
 import pytest
 
@@ -71,3 +72,19 @@ def test_run_dispatches_to_claude(monkeypatch):
     assert run["status"] == "done" and run["findings_count"] == 1, run["error"]
     assert calls[0]["model"] == "claude-sonnet-5" and calls[0]["effort"] == "low"
     conn.close()
+
+
+@pytest.mark.parametrize("provider", [codex, claude_cli])
+def test_repeated_login_returns_active_state_without_locking_itself(provider, monkeypatch):
+    monkeypatch.setattr(provider, "_login", {
+        "proc": None, "url": "https://example.test/login", "code": "ABCD-EFGH",
+        "lines": [], "done": False, "ok": False, "error": "",
+    })
+    monkeypatch.setattr(provider.subprocess, "Popen", lambda *a, **kw: pytest.fail("started another login"))
+    result = []
+    worker = threading.Thread(target=lambda: result.append(provider.start_login()), daemon=True)
+    worker.start()
+    worker.join(timeout=0.5)
+    assert not worker.is_alive(), "start_login deadlocked while reading the active login state"
+    assert result == [{"active": True, "url": "https://example.test/login", "code": "ABCD-EFGH",
+                       "ok": False, "error": ""}]

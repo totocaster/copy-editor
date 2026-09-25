@@ -192,7 +192,10 @@ def _execute(conn: sqlite3.Connection, run: sqlite3.Row) -> None:
         raise RunError("Document or pass disappeared")
 
     mod = providers.get(run["provider"] if "provider" in run.keys() and run["provider"] else "codex")
-    content = json.loads(doc["content_json"])
+    # The editor can change while a worker starts. Review exactly what was saved
+    # when the pass was requested, including when the revision checkbox was off.
+    content = json.loads(run["content_json"] or doc["content_json"])
+    doc_title = run["document_title"] if run["content_json"] else doc["title"]
     paras = paragraphs(content)
     wins = windows(paras, MAX_WINDOW_WORDS)
     rules = select_rules(conn, pass_row)
@@ -200,7 +203,9 @@ def _execute(conn: sqlite3.Connection, run: sqlite3.Row) -> None:
     allowed = [k.strip() for k in pass_row["allowed_kinds"].split(",") if k.strip() in repo.KINDS] or ["note"]
     known = repo.known_fingerprints(conn, doc_id)
     dismissed_here = repo.dismissed_findings(conn, doc_id)
-    dismissed_elsewhere = [r for r in repo.dismissed_findings(conn, None, 40) if r["document_id"] != doc_id][:25]
+    dismissed_elsewhere = []
+    if repo.get_setting(conn, "include_other_documents", "0") == "1":
+        dismissed_elsewhere = [r for r in repo.dismissed_findings(conn, None, 40) if r["document_id"] != doc_id][:25]
 
     repo.update_run(conn, run_id, status="running", started_at=repo.iso(repo.utcnow()), windows_total=len(wins))
     if not wins:
@@ -216,7 +221,7 @@ def _execute(conn: sqlite3.Connection, run: sqlite3.Row) -> None:
         if _is_cancelled(conn, run_id):
             cancelled = True
             break
-        prompt = build_prompt(doc_title=doc["title"], pass_row=pass_row, rules=rules, window=win, window_index=i,
+        prompt = build_prompt(doc_title=doc_title, pass_row=pass_row, rules=rules, window=win, window_index=i,
                               window_total=len(wins), dismissed_here=dismissed_here,
                               dismissed_elsewhere=dismissed_elsewhere)
         try:

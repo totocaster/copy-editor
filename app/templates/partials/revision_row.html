@@ -19,7 +19,9 @@
       <a href="/d/{{ doc.id }}/r/{{ r.id }}" class="text-stone-500 hover:text-stone-900">View &amp; diff</a>
       <button type="button" class="text-stone-500 hover:text-stone-900"
               hx-post="/d/{{ doc.id }}/revisions/{{ r.id }}/restore"
-              hx-confirm="Restore revision {{ r.seq }}? The current text is saved as a revision first.">Restore</button>
+              hx-vals='{{ {"base_version": doc.version}|tojson }}'
+              hx-confirm="Restore revision {{ r.seq }}? The current text is saved as a revision first."
+              data-save-gated="restore" data-restore-seq="{{ r.seq }}">Restore</button>
     </div>
   </div>
 </li>

@@ -4,13 +4,15 @@
   "private": true,
   "description": "Copy Editor: a workshop tool for prose with AI editing passes, annotations and revisions",
   "scripts": {
-    "vendor": "cp node_modules/htmx.org/dist/htmx.min.js app/static/js/htmx.min.js",
-    "build:css": "tailwindcss -i frontend/app.css -o app/static/css/app.css --minify",
-    "build:js": "esbuild frontend/editor.js --bundle --format=iife --target=es2020 --minify --sourcemap --outfile=app/static/js/editor.js",
+    "assets:dirs": "mkdir -p app/static/css app/static/js",
+    "vendor": "npm run assets:dirs && cp node_modules/htmx.org/dist/htmx.min.js app/static/js/htmx.min.js",
+    "build:css": "npm run assets:dirs && tailwindcss -i frontend/app.css -o app/static/css/app.css --minify",
+    "build:js": "npm run assets:dirs && esbuild frontend/editor.js --bundle --format=iife --target=es2020 --minify --sourcemap --outfile=app/static/js/editor.js",
     "build": "npm run vendor && npm run build:css && npm run build:js",
-    "watch:css": "tailwindcss -i frontend/app.css -o app/static/css/app.css --watch",
-    "watch:js": "esbuild frontend/editor.js --bundle --format=iife --target=es2020 --sourcemap --outfile=app/static/js/editor.js --watch",
-    "dev": "npm run vendor && (npm run watch:css & npm run watch:js & wait)"
+    "watch:css": "npm run assets:dirs && tailwindcss -i frontend/app.css -o app/static/css/app.css --watch=always",
+    "watch:js": "npm run assets:dirs && esbuild frontend/editor.js --bundle --format=iife --target=es2020 --sourcemap --outfile=app/static/js/editor.js --watch=forever",
+    "dev": "npm run vendor && sh scripts/watch.sh",
+    "test": "node --test tests/frontend/*.test.mjs"
   },
   "dependencies": {
     "@tiptap/core": "^3.31.3",

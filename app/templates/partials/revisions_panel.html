@@ -1,5 +1,6 @@
-<form hx-post="/d/{{ doc.id }}/revisions" hx-target="#drawer-body" hx-swap="innerHTML"
+<form hx-post="/d/{{ doc.id }}/revisions" hx-target="#drawer-body" hx-swap="innerHTML" data-save-gated="revision"
       class="space-y-3 border-b border-stone-200 bg-white px-5 py-4">
+  <input type="hidden" name="base_version" value="{{ doc.version }}">
   <p class="text-sm text-stone-600">
     {% if dirty %}The document has changed since the last saved revision.{% else %}The latest revision matches the current text.{% endif %}
   </p>

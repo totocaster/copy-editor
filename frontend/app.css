@@ -98,6 +98,11 @@
 #save-status[data-state="dirty"]  { color: var(--color-stone-400); }
 #save-status[data-state="saving"] { color: var(--color-stone-400); }
 #save-status[data-state="error"]  { color: var(--color-red-600); }
+#save-status[data-state="conflict"], #save-status[data-state="backup-error"] { color: var(--color-red-600); }
+.save-alert {
+  @apply mx-auto mt-3 flex max-w-[1280px] flex-wrap items-center gap-3 rounded border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-stone-800;
+}
+.save-alert[hidden] { display: none; }
 
 /* ---------------------------------------------------------------------------
    Highlights (annotation marks in the text)

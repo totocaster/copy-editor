@@ -1,5 +1,5 @@
 {% set checked_id = (passes|selectattr('is_primary')|map(attribute='id')|list|first) or (passes[0].id if passes else '') %}
-<form hx-post="/d/{{ doc.id }}/runs" hx-target="#run-strip" hx-swap="innerHTML" hx-on::after-request="Workshop.closeMenu()" class="space-y-1">
+<form hx-post="/d/{{ doc.id }}/runs" hx-target="#run-strip" hx-swap="innerHTML" data-save-gated="run" class="space-y-1">
   {% for p in passes %}
   <label class="menu-item">
     <input type="radio" name="pass_id" value="{{ p.id }}" class="mt-1 accent-stone-900"{% if p.id == checked_id %} checked{% endif %}

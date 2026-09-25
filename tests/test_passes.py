@@ -138,6 +138,43 @@ def test_run_refuses_when_signed_out_or_busy(conn, monkeypatch):
         runs.start_run(conn, d["id"], "copy-edit", model="", effort="low", snapshot=False)
 
 
+@pytest.mark.parametrize("snapshot", [False, True])
+def test_worker_reviews_saved_input_at_start_not_later_edits(conn, monkeypatch, signed_in, snapshot):
+    d = repo.create_document(conn, "Original title", doc(para("Text at the time of the request")))
+    captured = []
+    monkeypatch.setattr(codex, "run_exec", lambda prompt, schema, **kw:
+                        captured.append(prompt) or {"summary": "Done", "findings": []})
+    run = runs.start_run(conn, d["id"], "copy-edit", model="m", effort="low", snapshot=snapshot)
+    repo.save_content(conn, d["id"], doc(para("Later text that should not be reviewed")), title="Later title")
+    runs.execute_run(run["id"], conn)
+    assert repo.get_run(conn, run["id"])["status"] == "done"
+    assert "Original title" in captured[0] and "Text at the time of the request" in captured[0]
+    assert "Later title" not in captured[0] and "Later text" not in captured[0]
+
+
+@pytest.mark.parametrize("provider", ["codex", "claude"])
+@pytest.mark.parametrize("share", [False, True])
+def test_other_document_dismissals_require_opt_in(conn, monkeypatch, provider, share):
+    from app import providers
+    other = repo.create_document(conn, "Private draft", doc(para("OTHER-DOCUMENT-CANARY")))
+    ann = repo.create_ai_annotation(conn, other["id"], run_id="old", kind="suggest", quote="OTHER-DOCUMENT-CANARY",
+                                    body="Private comment", suggested_text="PRIVATE-REPLACEMENT", paragraph_hint=1,
+                                    anchor_from=1, anchor_to=5, rule_id=None, rule_number=None, confidence="high")
+    repo.set_annotation_status(conn, other["id"], ann["id"], "dismissed", "keep")
+    current = repo.create_document(conn, "Current draft", doc(para("Review this text")))
+    if share:
+        repo.set_setting(conn, "include_other_documents", "1")
+    captured = []
+    mod = providers.get(provider)
+    monkeypatch.setattr(mod, "status", lambda: {"installed": True, "signed_in": True})
+    monkeypatch.setattr(mod, "run_exec", lambda prompt, schema, **kw:
+                        captured.append(prompt) or {"summary": "Done", "findings": []})
+    run = runs.start_run(conn, current["id"], "copy-edit", model="m", effort="low", provider=provider)
+    runs.execute_run(run["id"], conn)
+    assert ("OTHER-DOCUMENT-CANARY" in captured[0]) is share
+    assert ("PRIVATE-REPLACEMENT" in captured[0]) is share
+
+
 def test_codex_parse_and_command():
     assert codex.parse_json_output('```json\n{"a": 1}\n```') == {"a": 1}
     assert codex.parse_json_output('noise {"a": 2} trailing') == {"a": 2}

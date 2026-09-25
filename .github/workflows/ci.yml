@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  clean-checkout:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: latest-known
+      - name: Install from lockfiles
+        run: make setup
+      - name: Build from a clean checkout
+        run: |
+          test ! -e app/static
+          make build
+          test -s app/static/css/app.css
+          test -s app/static/js/editor.js
+          test -s app/static/js/htmx.min.js
+      - name: Run Python and JavaScript tests
+        run: make test
+      - name: Check macOS launcher
+        if: runner.os == 'macOS'
+        run: |
+          bin/ce --help
+          if bin/ce --port nope >/dev/null 2>&1; then exit 1; fi

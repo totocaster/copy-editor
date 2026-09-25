@@ -10,10 +10,13 @@ import { SlashMenu } from './slash.js'
 import { createBubbleMenu } from './bubble.js'
 import { createSidebar } from './sidebar.js'
 import { locate } from './placement.js'
+import { createSaveCoordinator } from './save-coordinator.mjs'
+import { createDraftStore } from './recovery.mjs'
+import { gateSavedAction } from './save-gate.mjs'
 
 const data = JSON.parse(document.getElementById('workshop-data').textContent)
 const { docId } = data
-const JSON_HEADERS = { 'Content-Type': 'application/json', Accept: 'application/json' }
+const JSON_HEADERS = { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Write-CSRF': document.querySelector('meta[name="write-csrf-token"]')?.content || '' }
 
 const editorEl = document.getElementById('editor')
 const column = document.getElementById('editor-column')
@@ -24,70 +27,71 @@ const passMenu = document.getElementById('pass-menu')
 const exportMenu = document.getElementById('export-menu')
 const shortcutsDialog = document.getElementById('shortcuts')
 const runStrip = document.getElementById('run-strip')
+const titleEl = document.getElementById('title')
+const saveAlert = document.getElementById('save-alert')
+const saveAlertText = document.getElementById('save-alert-text')
+const retrySave = document.getElementById('retry-save')
+const replaceServer = document.getElementById('replace-server')
+const loadServer = document.getElementById('load-server')
+const draftPanel = document.getElementById('draft-panel')
 
 const uid = () =>
   crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('')
 
 // --- autosave ---------------------------------------------------------------
 
-let dirty = false
-let saving = false
-let timer = 0
+let coordinator
+let suppressUpdates = false
+let draftStore
+let recoveredDraft = null
+try { draftStore = createDraftStore(localStorage, docId, uid()) } catch { draftStore = null }
+let backupAvailable = !!draftStore
 
 function setStatus(stateName, label) {
   statusEl.dataset.state = stateName
   statusEl.textContent = label
 }
 
+function snapshot() {
+  return { content: editor.getJSON(), title: titleEl.value.trim() || 'Untitled' }
+}
+
+function showSaveState(state, error) {
+  const labels = { saved: 'Saved', saving: 'Saving…', dirty: 'Unsaved', error: 'Save failed', conflict: 'Save conflict', 'backup-error': 'Backup unavailable' }
+  setStatus(state, state === 'saved' ? savedLabel : labels[state])
+  saveAlert.hidden = !['error', 'conflict', 'backup-error'].includes(state)
+  retrySave.hidden = state !== 'error' && state !== 'backup-error'
+  replaceServer.hidden = loadServer.hidden = state !== 'conflict'
+  if (state === 'error') saveAlertText.textContent = 'Your changes are still here. Check your connection, then retry the save.'
+  if (state === 'backup-error') saveAlertText.textContent = 'This browser could not keep a local copy. Keep this page open and retry the save.'
+  if (state === 'conflict') saveAlertText.textContent = 'This document changed elsewhere. Your edits are kept here. Choose which version to keep.'
+  if (error) console.error('save failed', error)
+}
+
 function markDirty() {
-  dirty = true
-  setStatus('dirty', 'Unsaved')
-  clearTimeout(timer)
-  timer = setTimeout(save, 900)
+  if (!suppressUpdates) coordinator?.change(snapshot())
 }
 
-async function save({ keepalive = false } = {}) {
-  if (!dirty || saving) return
-  clearTimeout(timer)
-  saving = true
-  dirty = false
-  setStatus('saving', 'Saving…')
-  try {
-    const res = await fetch(`/d/${docId}/content`, {
-      method: 'PUT',
-      headers: JSON_HEADERS,
-      body: JSON.stringify({ content: editor.getJSON() }),
-      keepalive,
-    })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const result = await res.json()
-    wordsEl.textContent = result.word_count
-    setStatus('saved', result.revision ? `Saved · r${result.revision.seq}` : 'Saved')
-    if (result.annotation_changes?.length) sidebar.refresh()
-  } catch (err) {
-    console.error('save failed', err)
-    dirty = true
-    setStatus('error', 'Save failed')
-  } finally {
-    saving = false
-    if (dirty) {
-      clearTimeout(timer)
-      timer = setTimeout(save, 1500)
-    }
+async function save() { return coordinator.flush() }
+async function flushSave() { return coordinator.flush() }
+
+window.addEventListener('pagehide', () => {
+  if (coordinator?.dirty) {
+    try {
+      if (!draftStore) throw new Error('Local storage is unavailable')
+      draftStore.write(snapshot(), coordinator.version, coordinator.requiresReview)
+      backupAvailable = true
+    } catch (error) { backupAvailable = false; showSaveState('backup-error', error) }
   }
-}
-
-/** Wait for any in-flight save, then save again if there are unsaved edits. */
-async function flushSave() {
-  while (saving) await new Promise((r) => setTimeout(r, 50))
-  if (dirty) await save()
-}
-
-window.addEventListener('beforeunload', () => {
-  if (dirty) save({ keepalive: true })
+})
+window.addEventListener('beforeunload', (event) => {
+  if (coordinator?.dirty && !backupAvailable) {
+    event.preventDefault()
+    event.returnValue = ''
+  }
 })
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden && dirty) save({ keepalive: true })
+  if (document.hidden && coordinator?.dirty) void coordinator.flush()
 })
 
 // --- editor -----------------------------------------------------------------
@@ -126,9 +130,117 @@ const editor = new Editor({
 })
 
 // Highlights whose annotation is closed (or never existed) are stripped on load.
+const beforePrune = editor.getJSON()
 editor.commands.pruneAnnotations(data.openIds)
-dirty = false
-setStatus('saved', 'Saved')
+const prunedOnLoad = JSON.stringify(beforePrune) !== JSON.stringify(editor.getJSON())
+let savedLabel = 'Saved'
+coordinator = createSaveCoordinator({
+  snapshot: snapshot(),
+  version: data.version,
+  request: async (payload) => {
+    const res = await fetch(`/d/${docId}/content`, {
+      method: 'PUT', headers: JSON_HEADERS, body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      const error = new Error(`HTTP ${res.status}`)
+      error.status = res.status
+      throw error
+    }
+    return res.json()
+  },
+  persist: (value, version, requiresReview) => {
+    try {
+      if (!draftStore) throw new Error('Local storage is unavailable')
+      draftStore.write(value, version, requiresReview)
+      backupAvailable = true
+    } catch (error) { backupAvailable = false; throw error }
+  },
+  clear: () => draftStore?.clear(),
+  onState: showSaveState,
+  onSaved: (result) => {
+    wordsEl.textContent = result.word_count
+    savedLabel = result.revision ? `Saved · r${result.revision.seq}` : 'Saved'
+    if (result.annotation_changes?.length) void sidebar.refresh()
+    if (recoveredDraft && draftStore?.discard(recoveredDraft)) recoveredDraft = null
+  },
+})
+if (prunedOnLoad) coordinator.change(snapshot())
+titleEl.addEventListener('input', () => {
+  document.title = `${titleEl.value.trim() || 'Untitled'} · Copy Editor`
+  markDirty()
+})
+
+async function fetchServerContent() {
+  const res = await fetch(`/d/${docId}/content`, { headers: { Accept: 'application/json' } })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+retrySave.addEventListener('click', () => { void flushSave() })
+replaceServer.addEventListener('click', async () => {
+  try {
+    const latest = await fetchServerContent()
+    if (!window.confirm('Replace the latest saved text and title with your edits? The saved text will remain in revision history.')) return
+    coordinator.rebase(latest.version, { preserveBefore: true })
+    await flushSave()
+  } catch (error) {
+    console.error('could not check saved version', error)
+    saveAlertText.textContent = 'Could not check the saved version. Check your connection and try again.'
+  }
+})
+loadServer.addEventListener('click', async () => {
+  if (!window.confirm('Load the latest saved version and discard your unsaved edits on this page?')) return
+  try {
+    const latest = await fetchServerContent()
+    coordinator.adopt({ content: latest.content, title: latest.title }, latest.version)
+    window.location.reload()
+  } catch (error) {
+    console.error('could not load saved version', error)
+    saveAlertText.textContent = 'Could not load the saved version. Check your connection and try again.'
+  }
+})
+
+function renderDrafts() {
+  draftPanel.replaceChildren()
+  let drafts = []
+  try { drafts = draftStore?.list().filter((d) => d.key !== draftStore.key) || [] } catch (error) { showSaveState('backup-error', error) }
+  draftPanel.hidden = !drafts.length
+  if (!drafts.length) return
+  const heading = document.createElement('strong')
+  heading.textContent = `${drafts.length} unsaved ${drafts.length === 1 ? 'draft' : 'drafts'} found`
+  draftPanel.append(heading)
+  for (const draft of drafts) {
+    const row = document.createElement('span')
+    row.textContent = `${draft.snapshot.title} · ${new Date(draft.updatedAt).toLocaleString()} `
+    const recover = document.createElement('button')
+    recover.type = 'button'
+    recover.className = 'btn btn-sm'
+    recover.textContent = 'Recover draft'
+    recover.addEventListener('click', async () => {
+      if (localStorage.getItem(draft.key) !== draft.raw) { renderDrafts(); return }
+      if (coordinator.dirty && !await flushSave()) return
+      recoveredDraft = draft
+      suppressUpdates = true
+      try {
+        editor.commands.setContent(draft.snapshot.content)
+        titleEl.value = draft.snapshot.title
+        document.title = `${draft.snapshot.title || 'Untitled'} · Copy Editor`
+      } finally { suppressUpdates = false }
+      if (draft.version !== coordinator.version || draft.requiresReview) coordinator.holdConflict()
+      coordinator.change(snapshot())
+      draftPanel.hidden = true
+      sidebar.scheduleLayout()
+    })
+    const discard = document.createElement('button')
+    discard.type = 'button'
+    discard.className = 'btn-ghost btn-sm'
+    discard.textContent = 'Discard draft'
+    discard.addEventListener('click', () => { draftStore.discard(draft); renderDrafts() })
+    row.append(recover, discard)
+    draftPanel.append(row)
+  }
+}
+renderDrafts()
 
 const sidebar = createSidebar({ editor, docId, editorEl })
 const bubble = createBubbleMenu({ editor, container: column, onAnnotate: annotate })
@@ -296,6 +408,29 @@ document.body.addEventListener('annotation:deleted', (e) => {
 })
 document.body.addEventListener('htmx:responseError', (e) => {
   console.error('request failed', e.detail?.xhr?.status, e.detail?.pathInfo?.finalRequestPath)
+  if (e.detail?.xhr?.status === 409 && e.detail?.elt?.closest?.('[data-save-gated]')) {
+    if (!coordinator.dirty) coordinator.change(snapshot())
+    coordinator.holdConflict()
+  }
+})
+
+document.body.addEventListener('htmx:confirm', (e) => {
+  const gated = e.detail?.elt?.closest?.('[data-save-gated]')
+  if (!gated) return
+  e.preventDefault()
+  void (async () => {
+    await gateSavedAction(coordinator, () => {
+      if (gated.dataset.saveGated === 'restore' &&
+          !window.confirm(`Restore revision ${gated.dataset.restoreSeq}? The current text is saved as a revision first.`)) return
+      e.detail.issueRequest(true)
+    })
+  })()
+})
+document.body.addEventListener('htmx:configRequest', (e) => {
+  if (e.detail?.elt?.closest?.('[data-save-gated]')) e.detail.parameters.base_version = coordinator.version
+})
+document.body.addEventListener('htmx:afterRequest', (e) => {
+  if (e.detail?.successful && e.detail?.elt?.closest?.('[data-save-gated="run"]')) closeMenu()
 })
 
 // --- drawer, pass menu, global keys ----------------------------------------
@@ -367,16 +502,29 @@ function flash(el, label) {
 }
 
 async function exportDoc(format, mode, el) {
-  await flushSave()
-  const url = `/d/${docId}/export.${format}`
-  if (mode === 'download') {
-    exportMenu.hidden = true
-    window.location.assign(url)
-    return
-  }
+  if (!await flushSave()) { flash(el, 'Save first'); return }
+  const url = `/d/${docId}/export.${format}?inline=1&base_version=${coordinator.version}`
   try {
-    const res = await fetch(`${url}?inline=1`)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const res = await fetch(url)
+    if (!res.ok) {
+      if (res.status === 409) {
+        coordinator.change(snapshot())
+        coordinator.holdConflict()
+      }
+      throw new Error(`HTTP ${res.status}`)
+    }
+    if (mode === 'download') {
+      const blobUrl = URL.createObjectURL(await res.blob())
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = `${titleEl.value.trim() || 'document'}.${format}`
+      document.body.append(link)
+      link.click()
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000)
+      exportMenu.hidden = true
+      return
+    }
     const text = await res.text()
     let ok = false
     try {
@@ -388,7 +536,7 @@ async function exportDoc(format, mode, el) {
     flash(el, ok ? 'Copied' : 'Copy failed')
   } catch (err) {
     console.error('export failed', err)
-    flash(el, 'Export failed')
+    flash(el, coordinator.state === 'conflict' ? 'Version changed' : 'Export failed')
   }
 }
 
@@ -447,8 +595,7 @@ document.addEventListener('keydown', (e) => {
   const mod = e.metaKey || e.ctrlKey
   if (mod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's') {
     e.preventDefault()
-    dirty = true
-    save()
+    void save()
     return
   }
   // Work anywhere, including while typing.

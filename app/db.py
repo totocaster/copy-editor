@@ -114,7 +114,12 @@ CREATE TABLE IF NOT EXISTS settings (
 
 # Columns added after the first schema shipped. Applied idempotently by migrate().
 NEW_COLUMNS: dict[str, list[tuple[str, str]]] = {
-    "runs": [("provider", "TEXT NOT NULL DEFAULT 'codex'")],
+    "documents": [("version", "INTEGER NOT NULL DEFAULT 0")],
+    "runs": [
+        ("provider", "TEXT NOT NULL DEFAULT 'codex'"),
+        ("content_json", "TEXT NOT NULL DEFAULT ''"),
+        ("document_title", "TEXT NOT NULL DEFAULT ''"),
+    ],
     "passes": [("provider", "TEXT NOT NULL DEFAULT ''")],
     "annotations": [
         ("run_id", "TEXT"),
@@ -163,11 +168,10 @@ def init_db(conn: sqlite3.Connection) -> None:
     migrate(conn)
 
 
-def get_conn() -> Iterator[sqlite3.Connection]:
-    """FastAPI dependency: one connection per request, wrapped in a transaction."""
+def _connection(*, immediate: bool = False) -> Iterator[sqlite3.Connection]:
     conn = connect()
     try:
-        conn.execute("BEGIN")
+        conn.execute("BEGIN IMMEDIATE" if immediate else "BEGIN")
         yield conn
         conn.execute("COMMIT")
     except BaseException:
@@ -176,3 +180,17 @@ def get_conn() -> Iterator[sqlite3.Connection]:
         raise
     finally:
         conn.close()
+
+
+def get_conn() -> Iterator[sqlite3.Connection]:
+    """FastAPI dependency: one connection per request, wrapped in a transaction."""
+    yield from _connection()
+
+
+def get_write_conn() -> Iterator[sqlite3.Connection]:
+    """Serialize short document writes before reading their version.
+
+    A deferred read followed by a write can fail with SQLITE_BUSY_SNAPSHOT
+    instead of observing another tab's committed version.
+    """
+    yield from _connection(immediate=True)

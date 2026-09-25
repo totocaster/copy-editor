@@ -204,6 +204,7 @@ def run_exec(prompt: str, schema: dict[str, Any], *, model: str = "", effort: st
             stdout, stderr = proc.communicate(prompt, timeout=timeout)
         except subprocess.TimeoutExpired:
             proc.kill()
+            proc.communicate()  # drain pipes and reap the terminated child
             raise CodexError(f"Codex timed out after {int(timeout)}s")
         combined = (stderr or "") + "\n" + (stdout or "")
         low = combined.lower()
@@ -254,9 +255,11 @@ def _read_login(proc: subprocess.Popen[str]) -> None:
 
 def start_login() -> dict[str, Any]:
     with _login_lock:
-        if not _login["done"]:
-            return login_state()
-        _login.update(proc=None, url="", code="", lines=[], done=False, ok=False, error="")
+        active = not _login["done"]
+        if not active:
+            _login.update(proc=None, url="", code="", lines=[], done=False, ok=False, error="")
+    if active:
+        return login_state()
     try:
         proc = subprocess.Popen([CODEX_BIN, "login", "--device-auth"], stdin=subprocess.DEVNULL,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

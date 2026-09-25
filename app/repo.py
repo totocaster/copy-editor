@@ -43,6 +43,19 @@ DISMISS_REASONS: dict[str, str] = {
 EFFORTS = ("low", "medium", "high")
 
 
+class DocumentConflict(Exception):
+    """The caller edited an older version of the document."""
+
+    def __init__(self, version: int):
+        self.version = version
+        super().__init__("This document changed in another tab. Your draft has not replaced it.")
+
+
+def check_version(doc: sqlite3.Row, expected_version: int | None) -> None:
+    if expected_version is not None and doc["version"] != expected_version:
+        raise DocumentConflict(doc["version"])
+
+
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -104,40 +117,54 @@ def create_document(conn: sqlite3.Connection, title: str = "Untitled", content: 
     return get_document(conn, doc_id)  # type: ignore[return-value]
 
 
-def update_title(conn: sqlite3.Connection, doc_id: str, title: str) -> None:
+def update_title(conn: sqlite3.Connection, doc_id: str, title: str, *, expected_version: int | None = None) -> int:
+    doc = get_document(conn, doc_id)
+    if doc is None:
+        raise KeyError(doc_id)
+    check_version(doc, expected_version)
     title = title.strip() or "Untitled"
-    conn.execute("UPDATE documents SET title = ? WHERE id = ?", (title, doc_id))
+    if title != doc["title"]:
+        conn.execute("UPDATE documents SET title = ?, version = version + 1 WHERE id = ?", (title, doc_id))
+        return doc["version"] + 1
+    return doc["version"]
 
 
 def delete_document(conn: sqlite3.Connection, doc_id: str) -> None:
     conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
 
 
-def save_content(conn: sqlite3.Connection, doc_id: str, content: dict) -> dict[str, Any]:
+def save_content(conn: sqlite3.Connection, doc_id: str, content: dict, *, expected_version: int | None = None,
+                 title: str | None = None, preserve_before: bool = False) -> dict[str, Any]:
     """Store new editor content and apply the automatic revision policy."""
     doc = get_document(conn, doc_id)
     if doc is None:
         raise KeyError(doc_id)
+    check_version(doc, expected_version)
     new_json = dumps(content)
+    title = doc["title"] if title is None else title.strip() or "Untitled"
     now_dt = utcnow()
     now = iso(now_dt)
-    if new_json == doc["content_json"]:
+    if new_json == doc["content_json"] and title == doc["title"]:
         changes = sync_annotations(conn, doc_id, annotation_ranges(content))
         return {"changed": False, "word_count": doc["word_count"], "saved_at": now, "revision": None,
-                "annotation_changes": changes}
+                "annotation_changes": changes, "version": doc["version"]}
 
     created: sqlite3.Row | None = None
     latest = latest_revision(conn, doc_id)
     last_edit = parse_iso(doc["updated_at"])
-    if (latest is None or latest["content_json"] != doc["content_json"]) and now_dt - last_edit >= SESSION_GAP:
+    if preserve_before and (latest is None or latest["content_json"] != doc["content_json"]):
+        created = _insert_revision(conn, doc_id, doc["content_json"], doc["content_text"], doc["word_count"],
+                                   origin="auto", note="Before recovering a draft", now=now)
+    elif (latest is None or latest["content_json"] != doc["content_json"]) and now_dt - last_edit >= SESSION_GAP:
         created = _insert_revision(conn, doc_id, doc["content_json"], doc["content_text"], doc["word_count"],
                                    origin="auto", note="End of session", now=iso(last_edit))
 
     text = to_text(content)
     wc = word_count(text)
     conn.execute(
-        "UPDATE documents SET content_json = ?, content_text = ?, word_count = ?, updated_at = ? WHERE id = ?",
-        (new_json, text, wc, now, doc_id),
+        "UPDATE documents SET content_json = ?, content_text = ?, word_count = ?, updated_at = ?, "
+        "title = ?, version = version + 1 WHERE id = ?",
+        (new_json, text, wc, now, title, doc_id),
     )
 
     latest = latest_revision(conn, doc_id)
@@ -146,7 +173,8 @@ def save_content(conn: sqlite3.Connection, doc_id: str, content: dict) -> dict[s
             created = _insert_revision(conn, doc_id, new_json, text, wc, origin="auto", note="Checkpoint", now=now)
 
     changes = sync_annotations(conn, doc_id, annotation_ranges(content))
-    return {"changed": True, "word_count": wc, "saved_at": now, "revision": created, "annotation_changes": changes}
+    return {"changed": True, "word_count": wc, "saved_at": now, "revision": created,
+            "annotation_changes": changes, "version": doc["version"] + 1}
 
 
 # ----------------------------------------------------------------------------
@@ -217,18 +245,21 @@ def set_note(conn: sqlite3.Connection, doc_id: str, rev_id: str, note: str) -> s
     return get_revision(conn, doc_id, rev_id)
 
 
-def restore_revision(conn: sqlite3.Connection, doc_id: str, rev_id: str) -> sqlite3.Row:
+def restore_revision(conn: sqlite3.Connection, doc_id: str, rev_id: str, *,
+                     expected_version: int | None = None) -> sqlite3.Row:
     doc = get_document(conn, doc_id)
     rev = get_revision(conn, doc_id, rev_id)
     if doc is None or rev is None:
         raise KeyError(rev_id)
+    check_version(doc, expected_version)
     latest = latest_revision(conn, doc_id)
     if latest is None or latest["content_json"] != doc["content_json"]:
         _insert_revision(conn, doc_id, doc["content_json"], doc["content_text"], doc["word_count"],
                          origin="auto", note="Before restore")
     now = iso(utcnow())
     conn.execute(
-        "UPDATE documents SET content_json = ?, content_text = ?, word_count = ?, updated_at = ? WHERE id = ?",
+        "UPDATE documents SET content_json = ?, content_text = ?, word_count = ?, updated_at = ?, "
+        "version = version + 1 WHERE id = ?",
         (rev["content_json"], rev["content_text"], rev["word_count"], now, doc_id),
     )
     restored = _insert_revision(conn, doc_id, rev["content_json"], rev["content_text"], rev["word_count"],
@@ -649,11 +680,12 @@ def delete_pass(conn: sqlite3.Connection, pass_id: str) -> None:
 def create_run(conn: sqlite3.Connection, doc_id: str, pass_row: sqlite3.Row, *, model: str, effort: str,
                scope: str, revision_id: str | None, rules_snapshot: str, provider: str = "codex") -> sqlite3.Row:
     run_id = new_id()
+    doc = get_document(conn, doc_id)
     conn.execute(
         "INSERT INTO runs (id, document_id, pass_id, pass_name, provider, model, effort, scope, status, revision_id, "
-        "rules_snapshot, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?)",
+        "rules_snapshot, created_at, content_json, document_title) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?, ?)",
         (run_id, doc_id, pass_row["id"], pass_row["name"], provider, model, effort, scope, revision_id, rules_snapshot,
-         iso(utcnow())),
+         iso(utcnow()), doc["content_json"], doc["title"]),
     )
     return get_run(conn, run_id)  # type: ignore[return-value]
 

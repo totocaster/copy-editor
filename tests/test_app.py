@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -6,7 +8,9 @@ from app.main import app
 
 @pytest.fixture(scope="module")
 def client():
-    with TestClient(app) as c:
+    with TestClient(app, base_url="http://localhost", client=("127.0.0.1", 50000)) as c:
+        page = c.get("/")
+        c.headers["X-Write-CSRF"] = re.search(r'name="write-csrf-token" content="([^"]+)"', page.text).group(1)
         yield c
 
 
@@ -14,6 +18,14 @@ def make_doc(client):
     r = client.post("/documents", data={"title": "Draft"}, headers={"HX-Request": "true"})
     assert r.status_code == 204
     return r.headers["HX-Redirect"].rsplit("/", 1)[1]
+
+
+def version_data(client, doc_id, **fields):
+    return {"base_version": client.get(f"/d/{doc_id}/content").json()["version"], **fields}
+
+
+def save_doc(client, doc_id, content, **fields):
+    return client.put(f"/d/{doc_id}/content", json=version_data(client, doc_id, content=content, **fields))
 
 
 def test_index_and_create(client):
@@ -33,7 +45,7 @@ def test_content_save_and_annotation_lifecycle(client):
     r = client.post(f"/d/{doc_id}/annotations", json={"id": "abcdefgh1234", "kind": "suggest", "quote": "world",
                                                       "anchor_from": 7, "anchor_to": 12})
     assert r.status_code == 201 and r.json()["kind"] == "note"  # authors write notes
-    r = client.put(f"/d/{doc_id}/content", json={"content": content})
+    r = save_doc(client, doc_id, content)
     assert r.status_code == 200 and r.json()["word_count"] == 2
 
     r = client.get(f"/d/{doc_id}/annotations", params={"editing": "abcdefgh1234"})
@@ -54,10 +66,10 @@ def test_content_save_and_annotation_lifecycle(client):
 
 def test_revisions_flow(client):
     doc_id = make_doc(client)
-    r = client.put(f"/d/{doc_id}/content", json={"content": {"type": "doc", "content": [
-        {"type": "paragraph", "content": [{"type": "text", "text": "second draft"}]}]}})
+    r = save_doc(client, doc_id, {"type": "doc", "content": [
+        {"type": "paragraph", "content": [{"type": "text", "text": "second draft"}]}]})
     assert r.status_code == 200
-    r = client.post(f"/d/{doc_id}/revisions", data={"note": "Big rewrite", "is_major": "1"}, headers={"HX-Request": "true"})
+    r = client.post(f"/d/{doc_id}/revisions", data=version_data(client, doc_id, note="Big rewrite", is_major="1"), headers={"HX-Request": "true"})
     assert r.status_code == 200 and "Big rewrite" in r.text and "Major" in r.text
 
     r = client.get(f"/d/{doc_id}/revisions", headers={"HX-Request": "true"})
@@ -70,7 +82,7 @@ def test_revisions_flow(client):
     r = client.get(f"/d/{doc_id}/r/{rev_id}", params={"against": "prev"})
     assert r.status_code == 200 and "<ins>" in r.text and "Compared with revision 1" in r.text
 
-    r = client.post(f"/d/{doc_id}/revisions/{rev_id}/restore", headers={"HX-Request": "true"})
+    r = client.post(f"/d/{doc_id}/revisions/{rev_id}/restore", data=version_data(client, doc_id), headers={"HX-Request": "true"})
     assert r.status_code == 204 and r.headers["HX-Redirect"] == f"/d/{doc_id}"
     r = client.get(f"/d/{doc_id}/revisions", headers={"HX-Request": "true"})
     assert "Revision 3" in r.text and "restored" in r.text
@@ -111,7 +123,7 @@ def test_run_menu_and_start(client, monkeypatch):
     assert '<optgroup label="OpenAI · Codex CLI">' in r.text and 'value="codex:gpt-x"' in r.text
     assert "Anthropic · Claude Code" in r.text
     pass_id = r.text.split('name="pass_id" value="')[1].split('"')[0]
-    r = client.post(f"/d/{doc_id}/runs", data={"pass_id": pass_id, "choice": "codex:gpt-x", "effort": "medium", "snapshot": "1"})
+    r = client.post(f"/d/{doc_id}/runs", data=version_data(client, doc_id, pass_id=pass_id, choice="codex:gpt-x", effort="medium", snapshot="1"))
     assert r.status_code == 200 and "starting" in r.text and "run:started" in r.headers["HX-Trigger"]
     assert "gpt-x · low" in r.text  # medium is not offered by this model, so its default applies
     run_id = r.text.split('data-run="')[1].split('"')[0]
@@ -127,10 +139,10 @@ def test_run_menu_and_start(client, monkeypatch):
 
 def test_export_routes(client):
     doc_id = make_doc(client)
-    client.put(f"/d/{doc_id}/content", json={"content": {"type": "doc", "content": [
+    save_doc(client, doc_id, {"type": "doc", "content": [
         {"type": "heading", "attrs": {"level": 2}, "content": [{"type": "text", "text": "Part one"}]},
-        {"type": "paragraph", "content": [{"type": "text", "text": "Hello ", }, {"type": "text", "text": "there", "marks": [{"type": "bold"}]}]}]}})
-    client.put(f"/d/{doc_id}/title", data={"title": "My Draft: Ünïcode"})
+        {"type": "paragraph", "content": [{"type": "text", "text": "Hello ", }, {"type": "text", "text": "there", "marks": [{"type": "bold"}]}]}]})
+    client.put(f"/d/{doc_id}/title", data=version_data(client, doc_id, title="My Draft: Ünïcode"))
     r = client.get(f"/d/{doc_id}/export.md")
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/markdown")
     assert r.headers["content-disposition"].startswith('attachment; filename="my-draft-n-code.md"')
@@ -154,3 +166,17 @@ def test_pass_findings_are_not_editable(client, monkeypatch):
     assert client.put(f"/d/{doc_id}/annotations/{ann['id']}", data={"body": "nope"}).status_code == 403
     r = client.get(f"/d/{doc_id}/annotations")
     assert "Edit" not in r.text.split('id="ann-' + ann["id"])[1].split("</div>\n</div>")[0]
+
+
+def test_privacy_setting_is_off_by_default_and_can_be_disabled(client):
+    from app import repo
+    from app.db import connect
+    conn = connect()
+    assert repo.get_setting(conn, "include_other_documents", "0") == "0"
+    enabled = client.put("/settings/account/privacy", data={"include_other_documents": "1"})
+    assert enabled.status_code == 200 and "Sharing preference saved" in enabled.text
+    assert repo.get_setting(conn, "include_other_documents") == "1"
+    disabled = client.put("/settings/account/privacy", data={})
+    assert disabled.status_code == 200
+    assert repo.get_setting(conn, "include_other_documents") == "0"
+    conn.close()

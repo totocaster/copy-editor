@@ -26,12 +26,30 @@ EOF
 
 while (( $# )); do
   case "$1" in
-    -p|--port) PORT="$2"; shift 2 ;;
+    -p|--port)
+      if (( $# < 2 )); then print -u2 "ce: --port needs a number"; exit 2; fi
+      PORT="$2"; shift 2 ;;
     -o|--open) OPEN=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) print -u2 "ce: unknown option $1"; usage >&2; exit 2 ;;
   esac
 done
+
+if [[ $PORT != <-> ]] || (( PORT < 1 || PORT > 65535 )); then
+  print -u2 "ce: port must be an integer from 1 to 65535"
+  exit 2
+fi
+
+for command_name in uv npm node curl lsof; do
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    print -u2 "ce: $command_name is required; see README.md for setup"
+    exit 1
+  fi
+done
+if (( OPEN )) && ! command -v open >/dev/null 2>&1; then
+  print -u2 "ce: --open requires the macOS open command"
+  exit 1
+fi
 
 cd "$ROOT"
 
@@ -40,8 +58,8 @@ port_busy() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
 is_copy_editor() { curl -sf -m 2 "http://localhost:$1/" 2>/dev/null | grep -q "Documents · Copy Editor"; }
 
 # --- dependencies and build -------------------------------------------------
-[[ -d .venv ]] || { print "ce: installing Python dependencies…"; uv sync --quiet; }
-[[ -d node_modules ]] || { print "ce: installing Node dependencies…"; npm install --silent; }
+[[ -d .venv ]] || { print "ce: installing Python dependencies…"; uv sync --locked --quiet; }
+[[ -d node_modules ]] || { print "ce: installing Node dependencies…"; npm ci --silent; }
 needs_build=0
 for out in app/static/css/app.css app/static/js/editor.js app/static/js/htmx.min.js; do
   [[ -f $out ]] || needs_build=1
@@ -49,6 +67,7 @@ done
 if (( ! needs_build )); then
   [[ -n "$(find frontend app/templates -type f -newer app/static/css/app.css -print -quit)" ]] && needs_build=1
   [[ -n "$(find frontend -type f -newer app/static/js/editor.js -print -quit)" ]] && needs_build=1
+  [[ package-lock.json -nt app/static/js/htmx.min.js ]] && needs_build=1
 fi
 if (( needs_build )); then
   print "ce: building assets…"
@@ -70,7 +89,11 @@ if port_busy "$PORT"; then
     exit 0
   fi
   first=$PORT
-  while port_busy "$PORT" && (( PORT < first + 20 )); do (( PORT++ )); done
+  while port_busy "$PORT" && (( PORT < first + 20 && PORT < 65535 )); do (( PORT++ )); done
+  if port_busy "$PORT"; then
+    print -u2 "ce: no free port from $first through $PORT"
+    exit 1
+  fi
   print "ce: port $first is busy, using $PORT"
 fi
 URL="http://localhost:$PORT"
@@ -78,15 +101,26 @@ URL="http://localhost:$PORT"
 # --- run ----------------------------------------------------------------------
 uv run uvicorn app.main:app --host 127.0.0.1 --port "$PORT" --log-level warning --no-access-log &
 pid=$!
-stop() { kill -INT "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; print; print "ce: stopped"; exit 0; }
-trap stop INT TERM
+cleanup() {
+  trap - EXIT INT TERM
+  kill -INT "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'print; print "ce: stopped"; exit 130' INT
+trap 'exit 143' TERM
 
+ready=0
 for _ in {1..150}; do
-  curl -sf -m 1 "$URL/" >/dev/null 2>&1 && break
+  if curl -sf -m 1 "$URL/" >/dev/null 2>&1; then ready=1; break; fi
   if ! kill -0 "$pid" 2>/dev/null; then print -u2 "ce: the server exited during startup"; exit 1; fi
   sleep 0.1
 done
+if (( ! ready )); then
+  print -u2 "ce: the server did not become ready at $URL"
+  exit 1
+fi
 
 print -P "Copy Editor is running at %B$(link "$URL")%b   (Ctrl+C to stop)"
 (( OPEN )) && open "$URL"
-wait "$pid" || true
+wait "$pid"

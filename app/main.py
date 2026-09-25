@@ -19,7 +19,8 @@ from pydantic import BaseModel, Field
 
 from . import codex, providers, repo, runs
 from .content import diff_html, diff_stats, to_html, to_markdown, to_plaintext
-from .db import connect, get_conn, init_db
+from .db import connect, get_conn, get_write_conn, init_db
+from .security import CSRF_TOKEN, LocalRequestGuard
 
 BASE = Path(__file__).resolve().parent
 
@@ -36,10 +37,18 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Copy Editor", lifespan=lifespan)
-app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
+app.add_middleware(LocalRequestGuard)
+app.mount("/static", StaticFiles(directory=BASE / "static", check_dir=False), name="static")
 templates = Jinja2Templates(directory=BASE / "templates")
+templates.env.globals["csrf_token"] = CSRF_TOKEN
 
 Conn = Annotated[sqlite3.Connection, Depends(get_conn)]
+WriteConn = Annotated[sqlite3.Connection, Depends(get_write_conn)]
+
+
+@app.exception_handler(repo.DocumentConflict)
+async def document_conflict(_: Request, exc: repo.DocumentConflict):
+    return JSONResponse({"detail": str(exc), "version": exc.version}, status_code=409)
 
 
 # ----------------------------------------------------------------------------
@@ -173,25 +182,38 @@ def document_page(request: Request, conn: Conn, doc_id: str):
 
 
 @app.put("/d/{doc_id}/title")
-def update_title(conn: Conn, doc_id: str, title: Annotated[str, Form()] = ""):
+def update_title(conn: WriteConn, doc_id: str, base_version: Annotated[int, Form(ge=0)],
+                 title: Annotated[str, Form()] = ""):
     require_document(conn, doc_id)
-    repo.update_title(conn, doc_id, title)
-    return Response(status_code=204)
+    version = repo.update_title(conn, doc_id, title, expected_version=base_version)
+    return JSONResponse({"ok": True, "version": version})
 
 
 class ContentIn(BaseModel):
     content: dict[str, Any]
+    base_version: int = Field(ge=0, strict=True)
+    title: str | None = None
+    preserve_before: bool = False
+
+
+@app.get("/d/{doc_id}/content")
+def get_content(conn: Conn, doc_id: str):
+    doc = require_document(conn, doc_id)
+    return JSONResponse({"content": json.loads(doc["content_json"]), "title": doc["title"],
+                         "version": doc["version"]}, headers={"Cache-Control": "no-store"})
 
 
 @app.put("/d/{doc_id}/content")
-def save_content(conn: Conn, doc_id: str, payload: ContentIn):
+def save_content(conn: WriteConn, doc_id: str, payload: ContentIn):
     require_document(conn, doc_id)
     if payload.content.get("type") != "doc":
         raise HTTPException(422, "content must be a ProseMirror doc")
-    result = repo.save_content(conn, doc_id, payload.content)
+    result = repo.save_content(conn, doc_id, payload.content, expected_version=payload.base_version,
+                               title=payload.title, preserve_before=payload.preserve_before)
     rev = result["revision"]
     return JSONResponse({
         "ok": True,
+        "version": result["version"],
         "changed": result["changed"],
         "word_count": result["word_count"],
         "saved_at": result["saved_at"],
@@ -206,9 +228,10 @@ def filename_slug(title: str) -> str:
 
 
 @app.get("/d/{doc_id}/export.{fmt}")
-def export_document(conn: Conn, doc_id: str, fmt: str, inline: int = 0):
+def export_document(conn: Conn, doc_id: str, fmt: str, inline: int = 0, base_version: int | None = None):
     """The document as Markdown or plain text; a download unless ?inline=1."""
     doc = require_document(conn, doc_id)
+    repo.check_version(doc, base_version)
     content = json.loads(doc["content_json"])
     if fmt == "md":
         text, media = to_markdown(content, title=doc["title"]), "text/markdown"
@@ -370,10 +393,12 @@ def run_menu(request: Request, conn: Conn, doc_id: str):
 
 
 @app.post("/d/{doc_id}/runs", response_class=HTMLResponse)
-def start_run(request: Request, conn: Conn, doc_id: str, background: BackgroundTasks,
-              pass_id: Annotated[str, Form()], choice: Annotated[str, Form()] = "",
+def start_run(request: Request, conn: WriteConn, doc_id: str, background: BackgroundTasks,
+              pass_id: Annotated[str, Form()], base_version: Annotated[int, Form(ge=0)],
+              choice: Annotated[str, Form()] = "",
               effort: Annotated[str, Form()] = "medium", snapshot: Annotated[str | None, Form()] = None):
     doc = require_document(conn, doc_id)
+    repo.check_version(doc, base_version)
     try:
         provider, model = providers.parse_choice(choice)
         levels, model_default = providers.efforts_for(provider, model)
@@ -428,6 +453,7 @@ def account_ctx(conn: sqlite3.Connection, force: bool = False) -> dict[str, Any]
     ctx = model_choices(conn)
     ctx["logins"] = {pid: mod.login_state() for pid, mod in providers.REGISTRY.items()}
     ctx["login_active"] = any(state["active"] for state in ctx["logins"].values())
+    ctx["include_other_documents"] = repo.get_setting(conn, "include_other_documents", "0") == "1"
     return ctx
 
 
@@ -515,6 +541,12 @@ def account_defaults(request: Request, conn: Conn, default_choice: Annotated[str
     repo.set_setting(conn, "default_choice", default_choice.strip())
     repo.set_setting(conn, "default_effort", default_effort if default_effort in providers.ALL_EFFORTS else "medium")
     return render(request, "partials/settings_account.html", {"tab": "account", **account_ctx(conn), "saved": True})
+
+
+@app.put("/settings/account/privacy", response_class=HTMLResponse)
+def account_privacy(request: Request, conn: Conn, include_other_documents: Annotated[str | None, Form()] = None):
+    repo.set_setting(conn, "include_other_documents", "1" if include_other_documents == "1" else "0")
+    return render(request, "partials/settings_account.html", {"tab": "account", **account_ctx(conn), "privacy_saved": True})
 
 
 # Rules ----------------------------------------------------------------------
@@ -641,9 +673,11 @@ def revisions_panel(request: Request, conn: Conn, doc_id: str):
 
 
 @app.post("/d/{doc_id}/revisions", response_class=HTMLResponse)
-def create_snapshot(request: Request, conn: Conn, doc_id: str, note: Annotated[str, Form()] = "",
+def create_snapshot(request: Request, conn: WriteConn, doc_id: str, base_version: Annotated[int, Form(ge=0)],
+                    note: Annotated[str, Form()] = "",
                     is_major: Annotated[str | None, Form()] = None):
     doc = require_document(conn, doc_id)
+    repo.check_version(doc, base_version)
     repo.snapshot(conn, doc_id, note=note, is_major=bool(is_major))
     return render(request, "partials/revisions_panel.html", revisions_ctx(conn, doc))
 
@@ -668,10 +702,11 @@ def update_note(request: Request, conn: Conn, doc_id: str, rev_id: str, note: An
 
 
 @app.post("/d/{doc_id}/revisions/{rev_id}/restore")
-def restore(request: Request, conn: Conn, doc_id: str, rev_id: str):
+def restore(request: Request, conn: WriteConn, doc_id: str, rev_id: str,
+            base_version: Annotated[int, Form(ge=0)]):
     require_document(conn, doc_id)
     try:
-        repo.restore_revision(conn, doc_id, rev_id)
+        repo.restore_revision(conn, doc_id, rev_id, expected_version=base_version)
     except KeyError:
         raise HTTPException(404)
     if is_htmx(request):

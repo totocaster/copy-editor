@@ -109,7 +109,7 @@ def suggested_models() -> list[str]:
 
 def exec_command(schema_json: str, model: str = "", effort: str = "", system_prompt: str = SYSTEM_PROMPT) -> list[str]:
     cmd = [CLAUDE_BIN, "-p", "--output-format", "json", "--json-schema", schema_json, "--tools", "",
-           "--no-session-persistence", "--max-turns", "1"]
+           "--no-session-persistence"]
     if model:
         cmd += ["--model", model]
     if effort:
@@ -160,7 +160,18 @@ def run_exec(prompt: str, schema: dict[str, Any], *, model: str = "", effort: st
             stdout, stderr = proc.communicate(prompt, timeout=timeout)
         except subprocess.TimeoutExpired:
             proc.kill()
+            proc.communicate()  # drain pipes and reap the terminated child
             raise ClaudeError(f"Claude Code timed out after {int(timeout)}s")
+        if proc.returncode != 0:
+            combined = "\n".join(part for part in (stderr, stdout) if part).strip()
+            low = combined.lower()
+            if "not logged in" in low:
+                invalidate_status()
+                raise ClaudeError("Claude Code is not signed in. Sign in from Settings → Account.")
+            if "rate limit" in low or "usage limit" in low or "limit reached" in low:
+                raise ClaudeError("Usage limit reached on your Claude plan. Wait a while, then retry.")
+            tail = "\n".join(combined.splitlines()[-6:])
+            raise ClaudeError(f"Claude Code exited with {proc.returncode}: {tail or 'no output'}")
         if not (stdout or "").strip():
             tail = "\n".join((stderr or "").strip().splitlines()[-6:])
             raise ClaudeError(f"Claude Code exited with {proc.returncode}: {tail or 'no output'}")
@@ -197,9 +208,11 @@ def _read_login(proc: subprocess.Popen[str]) -> None:
 
 def start_login() -> dict[str, Any]:
     with _login_lock:
-        if not _login["done"]:
-            return login_state()
-        _login.update(proc=None, url="", code="", lines=[], done=False, ok=False, error="")
+        active = not _login["done"]
+        if not active:
+            _login.update(proc=None, url="", code="", lines=[], done=False, ok=False, error="")
+    if active:
+        return login_state()
     try:
         proc = subprocess.Popen([CLAUDE_BIN, "auth", "login", "--claudeai"], stdin=subprocess.DEVNULL,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=_env())
