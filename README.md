@@ -1,26 +1,45 @@
 # Copy Editor
 
-A workshop for prose. Write in a Notion-style editor, get a professional
-copy edit from a model that runs under the subscriptions you already have,
-and work through its findings the way you would with a human editor: accept,
-correct, question, dismiss. Every dismissal teaches the next pass. Every
-revision is kept.
+A local editor for writing and revising prose, with AI editing passes,
+annotations, and revision history. Write your draft, ask for a pass, and
+work through the findings beside your text. You decide which changes to make.
 
-No separate API key is required. Passes run through the Codex CLI or Claude
-Code signed in on your machine; their provider services receive each pass
-prompt.
+Copy Editor runs in your browser with a server on your own computer. Editing
+passes use the Codex CLI or Claude Code signed in on that machine. They send
+prompt context to the selected provider; no separate API key is required
+when using a supported subscription sign-in.
+
+## Why I made it
+
+I enjoy writing, and I don't like AI-generated text. But I can't deny that AI
+is a phenomenal tool in many ways. It can help me spot a mistake, question a
+claim, or notice where a sentence gets in the way of what I mean. I made
+Copy Editor to make that kind of help part of my writing process.
+
+This follows the idea in [The Human Border](https://ttvl.co/notes/the-human-border/):
+I am happy to use AI as a private tool, while taking responsibility for the
+words I share with other people. I want to do the writing, make the decisions,
+and stand behind the result.
+
+The workflow reflects that. I bring the draft and my own rules. The model
+leaves suggestions, questions, and notes. I can accept a correction, rewrite
+a passage myself, or dismiss a finding and explain why. The judgment stays
+with me.
+
+[Installation](#installation) · [Usage](#usage) · [Updating](#updating) ·
+[Troubleshooting](#troubleshooting) · [Data and backups](#data-backups-and-access) ·
+[Development](#development)
 
 ## What it does
 
 - **Editor.** Blocks, `/` menu, markdown shortcuts, smart typography, autosave.
-- **Your notes.** Select text, leave a note to self. Notes are the only kind
-  you write; the editing is the model's job.
+- **Your notes.** Select text and leave a note to yourself alongside the draft.
 - **Editing passes.** Copy edit, Proofread, Line edit, Tighten, Read as a
   reader, Fact check. Each is a preset you can edit or duplicate. Choose a
   model from OpenAI (via Codex) or Anthropic (via Claude Code) per run.
 - **A rulebook.** One-line rules in your own words, numbered, tagged,
-  switchable. Every enabled rule is checked on every copy edit, and each
-  finding names the rule it came from.
+  switchable. Copy edit passes receive every enabled rule; findings can name
+  the rule they came from.
 - **Findings as cards.** Suggestions with one-click Accept, cuts, editorial
   questions, fact checks with a Correct or Verified action, notes on patterns.
   Cards sit beside their highlight with a connector line; the panel scrolls
@@ -34,37 +53,225 @@ prompt.
 - **Keyboard.** `J`/`K` or `Alt+↓`/`Alt+↑` to step, `A` accept, `R` resolve,
   `X` dismiss, `?` for the full sheet.
 
-## Quick start
+## Installation
 
-Requirements: Python 3.12+, [uv](https://docs.astral.sh/uv/), Node 20+, npm,
-GNU or BSD Make, and at least one signed-in model CLI for editing passes:
+### Requirements
 
-- OpenAI: `npm i -g @openai/codex` then `codex login`
-- Anthropic: Claude Code, then `claude auth login`
+- macOS or Linux. The optional `ce` launcher is macOS-only.
+- Git, Python 3.12 or newer, [uv](https://docs.astral.sh/uv/getting-started/installation/),
+  [Node.js](https://nodejs.org/en/download) 20 or newer with npm, and Make.
+- A browser.
+- For AI passes, at least one installed and signed-in provider CLI:
+  [Codex CLI](https://learn.chatgpt.com/docs/codex/cli) or
+  [Claude Code](https://code.claude.com/docs/en/setup).
+
+Writing, notes, revisions, and export work without a model account. AI passes
+need an internet connection and use the selected provider account's access
+and usage limits.
+
+### Download, build, and start
+
+Run these commands in Terminal:
 
 ```bash
 git clone https://github.com/totocaster/copy-editor.git
 cd copy-editor
-make setup      # install dependencies from uv.lock and package-lock.json
-make build      # create the ignored app/static/ asset directories and bundles
-make run        # serve at http://127.0.0.1:8000
+make setup
+make build
+make run
 ```
 
-The Make targets work on macOS and Linux. For live CSS/JavaScript rebuilding and
-server reload, use `make dev` after setup. `make seed` adds a sample document.
-Generated assets stay out of Git, so a new checkout needs `make build` before
-serving pages. `make test` runs the Python and browser-free JavaScript tests;
-tests use a temporary database and stub model calls.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser. Keep the
+Terminal window open while you use the app; press **Ctrl+C** there to stop it.
+To start it again, return to the `copy-editor` directory and run `make run`.
 
-On macOS, `make cli` installs a `ce` launcher symlink in `~/.local/bin`. Add
-that directory to your `PATH` if necessary, then run `ce` from anywhere. It
-installs missing dependencies, builds changed assets, and starts a server on
-the next free port; Ctrl+C stops it. `ce --open` opens your browser and
-`ce --port 8010` chooses a starting port. The launcher uses macOS `zsh`,
-`lsof`, and `open`; use Make on Linux.
+`make setup` installs the versions in the Python and Node lockfiles.
+`make build` creates the CSS and JavaScript assets, which are not stored in
+Git. Keep this checkout: the app and, by default, your database live here.
 
-Then, in the app: Settings → Account to confirm your sign-ins, Settings → Rules
-to write your first rules, and the **Edit pass** button in any document.
+### Install the macOS launcher
+
+Stop the server with **Ctrl+C**, then run this from the checkout:
+
+```bash
+make cli
+export PATH="$HOME/.local/bin:$PATH"
+ce --open
+```
+
+This installs a symlink at `~/.local/bin/ce` and opens the app in your browser.
+If `~/.local/bin` is not already on your PATH, add the `export` line to
+`~/.zshrc` so new Terminal windows can find it. You can then run `ce --open`
+from any directory. Keep the checkout in place; rerun `make cli` if you move it.
+
+Other launch options:
+
+```bash
+ce                   # start the app and print its address
+ce --port 8010 --open # start at a different port and open the browser
+ce --help            # show launcher options
+```
+
+The launcher installs missing dependencies and rebuilds changed frontend
+assets. It reuses a running Copy Editor at the requested port, or tries nearby
+ports if another program occupies it. **Ctrl+C** stops a server started by
+that Terminal window. On Linux, use `make run`.
+
+### Connect an AI provider
+
+You only need one provider; installing both lets you choose between them for
+each pass. If the CLI is already installed and signed in, open
+**Settings → Account** and click **Re-check**.
+
+For **OpenAI**, install Codex and sign in:
+
+```bash
+npm install -g @openai/codex
+codex login
+```
+
+Complete the browser sign-in with your ChatGPT account. See the official
+[Codex installation guide](https://learn.chatgpt.com/docs/codex/cli) and
+[authentication guide](https://learn.chatgpt.com/docs/auth) for other options.
+
+For **Anthropic**, install Claude Code using its
+[installation guide](https://code.claude.com/docs/en/setup), then sign in:
+
+```bash
+claude auth login
+```
+
+The [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference)
+describes its account commands. Use the same computer and operating-system
+user that runs Copy Editor.
+
+In **Settings → Account**, confirm that the provider is signed in, choose
+your default model and reasoning effort, and click **Save**. You can also use
+the **Sign in** button there once a CLI is installed. Review **AI data sharing**
+on the same page: sharing dismissed findings from other documents is off by
+default.
+
+## Usage
+
+### 1. Write a draft
+
+Click **New document** on the Documents page. Give it a title and write or
+paste your draft into the editor. Type `/` to choose a block, or use Markdown
+shortcuts while typing. Select text to open the formatting toolbar and add
+a note to yourself.
+
+Text and title save automatically after you pause. Wait for **Saved** before
+closing the tab; **Cmd+S** on macOS or **Ctrl+S** on Linux saves immediately.
+
+### 2. Add your editing rules
+
+Open **Settings → Rules** and add one rule per line, in your own words. For
+example:
+
+```text
+Keep contractions where I use them.
+Flag repeated words in neighbouring sentences.
+Ask about an unclear reference instead of guessing what I mean.
+```
+
+Rules can be tagged, reordered, switched off, imported, and exported. The
+default **Copy edit** pass receives all enabled rules. Use
+**Settings → Passes** to edit or duplicate a preset, change its instructions
+and rule selection, or pin a model for it.
+
+### 3. Run an editing pass
+
+Open **Edit pass** in the document header and choose the kind of feedback
+you want:
+
+| Pass | Focus |
+| --- | --- |
+| Copy edit | Grammar, consistency, clarity, and your enabled rules. |
+| Proofread | Spelling, punctuation, and other mechanical errors. |
+| Line edit | Sentence rhythm, word choice, and redundancy. |
+| Tighten | Proposed cuts and shorter wording. |
+| Read as a reader | Questions and notes about attention, clarity, and credibility. |
+| Fact check | Names, dates, numbers, quotations, and claims to verify. |
+
+Choose a model and effort level, then click **Run pass**. Leave
+**Save a revision before running** checked if you want a snapshot of the
+draft you submitted. The app saves pending edits before starting the pass.
+Findings appear as the pass progresses, and you can cancel from its status
+strip. **Settings → Runs** shows previous runs and their status.
+
+Fact-check findings are leads for your own verification. Check the underlying
+sources before changing a claim or marking it verified.
+
+### 4. Work through the findings
+
+Click a highlight or its card to focus it. Use **Alt+↓** and **Alt+↑** to move
+between findings without leaving the keyboard.
+
+- **Accept** applies a suggested replacement; **Cut it** removes a proposed cut.
+- **Correct** applies a proposed factual correction. **Verified**, when shown,
+  records that you have checked the claim.
+- **Resolve** closes a question or note after you have dealt with it.
+- **Dismiss** leaves the wording alone and lets you choose a reason.
+
+You can also edit the draft yourself. Suggestions are applied only when you
+choose to apply them. Copy Editor reuses dismissal reasons as prompt context
+in later passes on that document.
+
+### 5. Keep and compare revisions
+
+Open **History**, add an optional note, and click **Save revision** at a point
+you want to keep. Flag important revisions as major. **View & diff** opens a
+saved revision and its word-level changes; **Restore** brings its text back
+while preserving the current text in history first.
+
+If you see **Save conflict**, another tab has saved a newer version. Choose
+**Load saved version** to discard this tab's unsaved edits, or **Replace saved
+version** to keep this tab's draft and preserve the previous saved text in
+history.
+
+If a tab closes before saving finishes, reopen the document in the same
+browser at the same local address. When a local backup is available,
+**Recover draft** restores it for review. Browser backups belong to that
+browser and address, including the port; clearing site data removes them.
+
+### 6. Export your writing
+
+Open **Export** in the header. Copy or download the document as **Markdown**
+or **plain text**. Export waits for pending edits to save. These exports contain
+the document text; use a database backup to keep annotations, rules, and
+revision history too.
+
+## Updating
+
+Wait for **Saved**, stop the server with **Ctrl+C**, and
+[back up your database](#data-backups-and-access). From the existing checkout:
+
+```bash
+git pull --ff-only
+make setup
+make build
+make run
+```
+
+On macOS, you can use `ce --open` instead of the final `make run`. Keep using
+the same checkout and database path so your documents remain available, and
+reload open browser tabs after restarting the server.
+
+## Troubleshooting
+
+| Problem | What to check |
+| --- | --- |
+| `ce: command not found` | Run `make cli` from the checkout and add `~/.local/bin` to your PATH, or launch with `~/.local/bin/ce --open`. |
+| A required command is missing | Install the tools listed under Requirements, open a new Terminal window, and rerun `make setup`. |
+| The editor is blank or unstyled | Run `make build`, restart the server, and reload the page. |
+| `make run` reports that port 8000 is in use | On macOS, use `ce --port 8010 --open`. On Linux, run `uv run uvicorn app.main:app --host 127.0.0.1 --port 8010` from the checkout. |
+| **Run pass** is disabled | Check **Settings → Account → Re-check** for an installed, signed-in provider. Wait for or cancel any active pass on the document. |
+| A pass fails | Hover over **error** under **Settings → Runs** to read the message. Check the provider sign-in, CLI version, connection, and account usage limits. |
+| **Save failed** or **Backup unavailable** | Keep the tab open, copy your draft somewhere safe, and retry after checking the server and browser storage. If the server was restarted, preserve unsaved text before reloading the page. |
+
+For a bug report, include your OS, browser, provider CLI version, and the error
+message, with invented text that reproduces it. See
+[CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 ## How it works
 
@@ -167,7 +374,29 @@ you have verified the restore. Never replace only the main database file while
 the app is running or while old WAL files remain beside it. If you set
 `WRITE_DB`, use that path and its companion files in both commands.
 
-## Project layout
+## Development
+
+After installation, run the frontend watchers and reload server together:
+
+```bash
+make dev
+```
+
+Run the automated checks:
+
+```bash
+make test
+```
+
+This runs pytest and the browser-free JavaScript tests. Tests use a temporary
+database and stub model calls; a signed-in provider is not required. CI builds
+and tests clean checkouts on macOS and Linux.
+
+`make seed` adds a sample document with annotations to the configured database
+if you want to explore the interface. See [CONTRIBUTING.md](CONTRIBUTING.md)
+before submitting a change.
+
+### Project layout
 
 | Path | Role |
 | --- | --- |
@@ -189,6 +418,9 @@ Stack: FastAPI, Jinja2, HTMX, SQLite, Tailwind v4 built locally, TipTap
 (ProseMirror) bundled with esbuild.
 
 ## Keyboard shortcuts
+
+On Linux, use **Ctrl** wherever **Cmd** is shown. **Alt** is the **Option** key
+on macOS.
 
 Press `?` in the editor. `/` opens the block menu and Markdown shortcuts work;
 `Cmd+Alt+M` adds a note on the selection; `Cmd+S` saves now. `Alt+↓`/`Alt+↑`
