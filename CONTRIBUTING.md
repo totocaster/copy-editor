@@ -21,5 +21,34 @@ privacy, security, or concurrency issue. Before changing how document text
 or dismissal history is sent to a model provider, update the Account copy and
 README privacy section in the same change.
 
+Add a line under **Unreleased** in [CHANGELOG.md](CHANGELOG.md) for any change
+a writer would notice, written for them rather than as a commit summary. Note
+database changes under **Upgrade notes**.
+
+## Releasing
+
+Versions follow semantic versioning, and `pyproject.toml` holds the version.
+From a clean, up-to-date `main` whose changelog has notes under **Unreleased**:
+
+```bash
+make release VERSION=0.3.0
+```
+
+This runs the tests, writes the version into `pyproject.toml`, `package.json`,
+`package-lock.json`, and `uv.lock`, dates the changelog section, commits, and
+creates an annotated `v0.3.0` tag. It does not push. Review the commit, then
+push `main` and the tag together:
+
+```bash
+git push origin main v0.3.0
+```
+
+The tag runs the release workflow: the full CI on macOS and Linux, a check
+that the tag matches the project version, and a GitHub Release whose notes are
+that changelog section. Never move or reuse a pushed tag; fix mistakes in a
+new patch release.
+
+## Security
+
 For potential security vulnerabilities, follow [SECURITY.md](SECURITY.md)
 instead of posting exploit details in a public issue.

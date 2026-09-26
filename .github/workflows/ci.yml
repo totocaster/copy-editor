@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
+    branches: ['**']   # tags run this through release.yml instead
   pull_request:
+  workflow_call:
 
 jobs:
   clean-checkout:

@@ -1,0 +1,36 @@
+name: Release
+
+# Pushing a tag like v0.3.0 (made by `make release VERSION=0.3.0`) builds and
+# tests it on clean macOS and Linux checkouts, then publishes a GitHub Release
+# whose notes are that version's section of CHANGELOG.md.
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the tag matches the project version
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match pyproject.toml version $version"
+            exit 1
+          fi
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          python3 scripts/release.py notes "$version" > release-notes.md
+          gh release create "$GITHUB_REF_NAME" --verify-tag \
+            --title "Copy Editor $version" --notes-file release-notes.md

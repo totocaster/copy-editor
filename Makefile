@@ -1,4 +1,4 @@
-.PHONY: setup build dev run seed test cli
+.PHONY: setup build dev run seed test cli release
 
 setup:        ## install locked Python and Node dependencies
 	uv sync --locked --group dev
@@ -22,3 +22,7 @@ test:         ## run Python and browser-free JavaScript tests
 
 cli:          ## put the `ce` launcher on your PATH (symlink in ~/.local/bin)
 	mkdir -p ~/.local/bin && ln -sf "$(CURDIR)/bin/ce" ~/.local/bin/ce && echo "installed ~/.local/bin/ce"
+
+release:      ## tag a release from main: make release VERSION=x.y.z (does not push)
+	@test -n "$(VERSION)" || { echo "usage: make release VERSION=x.y.z"; exit 2; }
+	uv run python scripts/release.py $(VERSION)

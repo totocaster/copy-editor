@@ -14,12 +14,13 @@ OPEN=0
 
 usage() {
   cat <<EOF
-usage: ce [--port N] [--open]
+usage: ce [--port N] [--open] [--version]
 
 Starts Copy Editor from $ROOT and prints its address. Ctrl+C stops it.
 
   -p, --port N   listen on port N (default 8000; if busy, the next free one)
   -o, --open     also open it in your browser
+  -v, --version  print the Copy Editor version
   -h, --help     this message
 EOF
 }
@@ -30,6 +31,7 @@ while (( $# )); do
       if (( $# < 2 )); then print -u2 "ce: --port needs a number"; exit 2; fi
       PORT="$2"; shift 2 ;;
     -o|--open) OPEN=1; shift ;;
+    -v|--version) print "Copy Editor $(sed -n 's/^version = "\(.*\)"$/\1/p' "$ROOT/pyproject.toml")"; exit 0 ;;
     -h|--help) usage; exit 0 ;;
     *) print -u2 "ce: unknown option $1"; usage >&2; exit 2 ;;
   esac

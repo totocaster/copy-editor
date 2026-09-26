@@ -49,6 +49,8 @@ with me.
   Sharing dismissal examples from other documents is an optional Account setting.
 - **Revisions.** Automatic snapshots at session boundaries and, by default,
   before passes; manual ones with a note and a *major* flag; word-level diffs and restore.
+- **Archive.** Move documents you're not working on out of the main list.
+  They stay editable and can be moved back at any time.
 - **Export.** Copy or download as Markdown or plain text.
 - **Keyboard.** `J`/`K` or `Alt+↓`/`Alt+↑` to step, `A` accept, `R` resolve,
   `X` dismiss, `?` for the full sheet.
@@ -109,6 +111,7 @@ Other launch options:
 ```bash
 ce                   # start the app and print its address
 ce --port 8010 --open # start at a different port and open the browser
+ce --version         # print the Copy Editor version
 ce --help            # show launcher options
 ```
 
@@ -243,6 +246,11 @@ revision history too.
 
 ## Updating
 
+Each release is listed under
+[Releases](https://github.com/totocaster/copy-editor/releases) and in
+[CHANGELOG.md](CHANGELOG.md), with **Upgrade notes** when it changes the
+database. **Settings** and `ce --version` show which version you're running.
+
 Wait for **Saved**, stop the server with **Ctrl+C**, and
 [back up your database](#data-backups-and-access). From the existing checkout:
 
@@ -269,8 +277,8 @@ reload open browser tabs after restarting the server.
 | A pass fails | Hover over **error** under **Settings → Runs** to read the message. Check the provider sign-in, CLI version, connection, and account usage limits. |
 | **Save failed** or **Backup unavailable** | Keep the tab open, copy your draft somewhere safe, and retry after checking the server and browser storage. If the server was restarted, preserve unsaved text before reloading the page. |
 
-For a bug report, include your OS, browser, provider CLI version, and the error
-message, with invented text that reproduces it. See
+For a bug report, include the Copy Editor version, your OS, browser, provider
+CLI version, and the error message, with invented text that reproduces it. See
 [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
 
 ## How it works
@@ -411,6 +419,7 @@ before submitting a change.
 | `frontend/` | Editor entry, annotation mark, placement, sidebar, connectors, menus, Tailwind source. |
 | `bin/ce` | The launcher. |
 | `scripts/watch.sh`, `scripts/dev.sh` | Frontend watchers and live server lifecycle. |
+| `scripts/release.py` | Cuts a release: version bump, changelog date, commit, tag (`make release`). |
 | `docs/mockups/` | The design mockup and proposal for the AI passes. |
 | `tests/` | pytest and Node `node:test` suites (`make test`). |
 

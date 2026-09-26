@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
-from . import codex, providers, repo, runs
+from . import __version__, codex, providers, repo, runs
 from .content import diff_html, diff_stats, to_html, to_markdown, to_plaintext
 from .db import connect, get_conn, get_write_conn, init_db
 from .security import CSRF_TOKEN, LocalRequestGuard
@@ -36,11 +36,12 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Copy Editor", lifespan=lifespan)
+app = FastAPI(title="Copy Editor", version=__version__, lifespan=lifespan)
 app.add_middleware(LocalRequestGuard)
 app.mount("/static", StaticFiles(directory=BASE / "static", check_dir=False), name="static")
 templates = Jinja2Templates(directory=BASE / "templates")
 templates.env.globals["csrf_token"] = CSRF_TOKEN
+templates.env.globals["app_version"] = __version__
 
 Conn = Annotated[sqlite3.Connection, Depends(get_conn)]
 WriteConn = Annotated[sqlite3.Connection, Depends(get_write_conn)]

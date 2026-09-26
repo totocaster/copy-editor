@@ -15,6 +15,7 @@
        hx-on:click="document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('is-active')); this.classList.add('is-active')"
        class="nav-link{% if tab == t %} is-active{% endif %}">{{ t|capitalize }}</a>
     {% endfor %}
+    <p class="px-2 pt-4 text-xs text-stone-400">Copy Editor {{ app_version }}</p>
   </nav>
   <div id="settings-main">
     {% include "partials/settings_" ~ tab ~ ".html" %}
