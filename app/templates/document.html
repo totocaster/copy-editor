@@ -37,11 +37,10 @@
         </div>
       </div>
       <button type="button" class="icon-btn" onclick="Workshop.toggleShortcuts()" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">{{ icon('keyboard') }}</button>
-      <button type="button" class="btn h-8" data-save-gated="archive"
+      {% set archive_label = 'Unarchive' if doc.archived_at else 'Archive' %}
+      <button type="button" class="icon-btn" data-save-gated="archive" title="{{ archive_label }}" aria-label="{{ archive_label }}"
               hx-post="/documents/{{ doc.id }}/{{ 'unarchive' if doc.archived_at else 'archive' }}?from_editor=true"
-              hx-swap="none">
-        {{ 'Unarchive' if doc.archived_at else 'Archive' }}
-      </button>
+              hx-swap="none">{{ icon('unarchive' if doc.archived_at else 'archive') }}</button>
       <a href="/settings" class="icon-btn" title="Settings" aria-label="Settings">{{ icon('settings') }}</a>
     </div>
   </div>
