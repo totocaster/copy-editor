@@ -84,7 +84,7 @@ fi
 # --- port ---------------------------------------------------------------------
 if port_busy "$PORT"; then
   if is_copy_editor "$PORT"; then
-    print -P "Copy Editor is already running at %B$(link "http://localhost:$PORT")%b"
+    print -rP "Copy Editor is already running at %B$(link "http://localhost:$PORT")%b"
     (( OPEN )) && open "http://localhost:$PORT"
     exit 0
   fi
@@ -121,6 +121,6 @@ if (( ! ready )); then
   exit 1
 fi
 
-print -P "Copy Editor is running at %B$(link "$URL")%b   (Ctrl+C to stop)"
+print -rP "Copy Editor is running at %B$(link "$URL")%b   (Ctrl+C to stop)"
 (( OPEN )) && open "$URL"
 wait "$pid"
