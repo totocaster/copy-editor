@@ -8,6 +8,8 @@ before updating either way.
 
 ## Unreleased
 
+## 0.2.0 - 2026-09-26
+
 The first tagged release.
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "copy-editor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Copy Editor: a workshop tool for prose with AI editing passes, annotations and revisions",
   "scripts": {
