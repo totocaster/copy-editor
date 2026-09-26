@@ -51,6 +51,25 @@ def release_notes(changelog: str, version: str) -> str:
     return notes
 
 
+BLOCK_START = re.compile(r"(#|[-*+] |\d+[.)] |>|\||```)")
+
+
+def unwrap(markdown: str) -> str:
+    """Join hard-wrapped lines: GitHub renders every newline in release notes as a line break."""
+    out: list[str] = []
+    fenced = False
+    for line in markdown.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            fenced = not fenced
+        elif not fenced and stripped and out and out[-1].strip() and not out[-1].lstrip().startswith(("#", "|", "```")) \
+                and not BLOCK_START.match(stripped):
+            out[-1] = f"{out[-1].rstrip()} {stripped}"
+            continue
+        out.append(line)
+    return "\n".join(out)
+
+
 def date_unreleased(changelog: str, version: str, day: date) -> str:
     """Turn the Unreleased notes into the `version` section and open a fresh Unreleased one."""
     if not section(changelog, UNRELEASED):
@@ -114,7 +133,7 @@ def cut(version: str) -> None:
 def main(argv: list[str]) -> int:
     try:
         if len(argv) == 2 and argv[0] == "notes":
-            print(release_notes(CHANGELOG.read_text(), argv[1]))
+            print(unwrap(release_notes(CHANGELOG.read_text(), argv[1])))
         elif len(argv) == 1 and argv[0] not in {"-h", "--help"}:
             cut(argv[0])
         else:

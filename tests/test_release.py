@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 import app
-from scripts.release import ReleaseError, date_unreleased, main, release_notes, section
+from scripts.release import ReleaseError, date_unreleased, main, release_notes, section, unwrap
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -61,6 +61,33 @@ def test_dating_refuses_empty_or_duplicate_notes():
         date_unreleased(date_unreleased(CHANGELOG, "0.3.0", date(2026, 10, 1)), "0.4.0", date(2026, 10, 2))
     with pytest.raises(ReleaseError, match="already has"):
         date_unreleased(CHANGELOG, "0.2.0", date(2026, 10, 1))
+
+
+def test_unwrap_joins_wrapped_lines_but_keeps_blocks():
+    wrapped = """Intro that wraps
+onto a second line.
+
+### Added
+
+- A list item that wraps
+  onto an indented line.
+- Another item.
+
+```bash
+make release
+  VERSION=1.0.0
+```"""
+    assert unwrap(wrapped) == """Intro that wraps onto a second line.
+
+### Added
+
+- A list item that wraps onto an indented line.
+- Another item.
+
+```bash
+make release
+  VERSION=1.0.0
+```"""
 
 
 def test_cli_rejects_bad_versions_before_touching_anything(capsys):
