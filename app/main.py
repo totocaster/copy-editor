@@ -130,8 +130,15 @@ def require_document(conn: sqlite3.Connection, doc_id: str) -> sqlite3.Row:
 # ----------------------------------------------------------------------------
 
 @app.get("/", response_class=HTMLResponse)
-def index(request: Request, conn: Conn):
-    return render(request, "index.html", {"documents": repo.list_documents(conn)})
+def index(request: Request, conn: Conn, view: str = "active"):
+    if view not in ("active", "archive"):
+        raise HTTPException(404)
+    archived = view == "archive"
+    return render(request, "index.html", {
+        "documents": repo.list_documents(conn, archived=archived),
+        "counts": repo.document_counts(conn),
+        "view": view,
+    })
 
 
 @app.post("/documents")
@@ -147,6 +154,28 @@ def delete_document(conn: Conn, doc_id: str):
     require_document(conn, doc_id)
     repo.delete_document(conn, doc_id)
     return Response(status_code=200)
+
+
+def change_archive_state(request: Request, conn: sqlite3.Connection, doc_id: str, *, archived: bool,
+                         from_editor: bool) -> Response:
+    require_document(conn, doc_id)
+    repo.set_document_archived(conn, doc_id, archived)
+    destination = "/?view=archive" if archived else "/"
+    if is_htmx(request):
+        if from_editor:
+            return Response(status_code=204, headers={"HX-Redirect": destination})
+        return Response(status_code=200, headers={"HX-Refresh": "true"})
+    return RedirectResponse(destination, status_code=303)
+
+
+@app.post("/documents/{doc_id}/archive")
+def archive_document(request: Request, conn: WriteConn, doc_id: str, from_editor: bool = False):
+    return change_archive_state(request, conn, doc_id, archived=True, from_editor=from_editor)
+
+
+@app.post("/documents/{doc_id}/unarchive")
+def unarchive_document(request: Request, conn: WriteConn, doc_id: str, from_editor: bool = False):
+    return change_archive_state(request, conn, doc_id, archived=False, from_editor=from_editor)
 
 
 def sidebar_ctx(conn: sqlite3.Connection, doc: sqlite3.Row, editing: str | None = None,

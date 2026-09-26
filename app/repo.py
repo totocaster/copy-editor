@@ -85,7 +85,7 @@ def fingerprint(kind: str, quote: str) -> str:
 # Documents
 # ----------------------------------------------------------------------------
 
-def list_documents(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+def list_documents(conn: sqlite3.Connection, *, archived: bool = False) -> list[sqlite3.Row]:
     return conn.execute(
         """
         SELECT d.*,
@@ -93,9 +93,19 @@ def list_documents(conn: sqlite3.Connection) -> list[sqlite3.Row]:
                (SELECT COUNT(*) FROM revisions r WHERE r.document_id = d.id AND r.is_major = 1) AS major_count,
                (SELECT COUNT(*) FROM annotations a WHERE a.document_id = d.id AND a.status IN ('open', 'pending')) AS open_annotations
         FROM documents d
+        WHERE (d.archived_at IS NOT NULL) = ?
         ORDER BY d.updated_at DESC
-        """
+        """,
+        (archived,),
     ).fetchall()
+
+
+def document_counts(conn: sqlite3.Connection) -> dict[str, int]:
+    row = conn.execute(
+        "SELECT COUNT(*) FILTER (WHERE archived_at IS NULL), "
+        "COUNT(*) FILTER (WHERE archived_at IS NOT NULL) FROM documents"
+    ).fetchone()
+    return {"active": row[0], "archived": row[1]}
 
 
 def get_document(conn: sqlite3.Connection, doc_id: str) -> sqlite3.Row | None:
@@ -127,6 +137,14 @@ def update_title(conn: sqlite3.Connection, doc_id: str, title: str, *, expected_
         conn.execute("UPDATE documents SET title = ?, version = version + 1 WHERE id = ?", (title, doc_id))
         return doc["version"] + 1
     return doc["version"]
+
+
+def set_document_archived(conn: sqlite3.Connection, doc_id: str, archived: bool) -> sqlite3.Row:
+    if get_document(conn, doc_id) is None:
+        raise KeyError(doc_id)
+    archived_at = iso(utcnow()) if archived else None
+    conn.execute("UPDATE documents SET archived_at = ? WHERE id = ?", (archived_at, doc_id))
+    return get_document(conn, doc_id)  # type: ignore[return-value]
 
 
 def delete_document(conn: sqlite3.Connection, doc_id: str) -> None:

@@ -1,26 +1,42 @@
 {% extends "base.html" %}
-{% block title %}Documents · Copy Editor{% endblock %}
+{% block title %}{{ 'Archive' if view == 'archive' else 'Documents' }} · Copy Editor{% endblock %}
 {% block body %}
 <main class="mx-auto max-w-3xl px-6 py-16">
-  <header class="mb-10 flex items-end justify-between gap-6">
-    <div>
+  <header class="mb-8 flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
+    <div class="min-w-0">
       <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-400">Copy Editor</p>
-      <h1 class="text-3xl font-semibold tracking-tight">Documents</h1>
-      <p class="mt-1 text-stone-500">Drafts, editing passes, and every revision along the way.</p>
+      <h1 class="text-3xl font-semibold tracking-tight">{{ 'Archive' if view == 'archive' else 'Documents' }}</h1>
+      <p class="mt-1 text-stone-500">
+        {% if view == 'archive' %}Archived documents stay editable and can be moved back anytime.
+        {% else %}Drafts, editing passes, and every revision along the way.{% endif %}
+      </p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex shrink-0 items-center gap-2">
       <a href="/settings" class="btn">Settings</a>
+      {% if view == 'active' %}
       <form hx-post="/documents" hx-swap="none">
         <button type="submit" class="btn-primary">New document</button>
       </form>
+      {% endif %}
     </div>
   </header>
+
+  <nav class="mb-5 flex gap-1 border-b border-stone-200 text-sm" aria-label="Document lists">
+    <a href="/" class="tab{% if view == 'active' %} is-active{% endif %}"{% if view == 'active' %} aria-current="page"{% endif %}>
+      Documents <span class="ml-1 text-xs text-stone-400">{{ counts.active }}</span>
+    </a>
+    <a href="/?view=archive" class="tab{% if view == 'archive' %} is-active{% endif %}"{% if view == 'archive' %} aria-current="page"{% endif %}>
+      Archive <span class="ml-1 text-xs text-stone-400">{{ counts.archived }}</span>
+    </a>
+  </nav>
 
   <ul id="documents" class="divide-y divide-stone-200 border-y border-stone-200">
     {% for d in documents %}
       {% include "partials/document_row.html" %}
     {% else %}
-      <li class="py-16 text-center text-stone-400">No documents yet. Start one above.</li>
+      <li class="py-16 text-center text-stone-400">
+        {% if view == 'archive' %}No archived documents.{% else %}No documents yet. Create one above.{% endif %}
+      </li>
     {% endfor %}
   </ul>
 </main>

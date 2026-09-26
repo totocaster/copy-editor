@@ -4,10 +4,13 @@
 {% from "partials/icons.html" import icon %}
 <header class="topbar">
   <div class="topbar-inner">
-    <a href="/" class="icon-btn shrink-0" title="All documents" aria-label="All documents">{{ icon('back') }}</a>
+    <a href="{{ '/?view=archive' if doc.archived_at else '/' }}" class="icon-btn shrink-0"
+       title="{{ 'Archive' if doc.archived_at else 'All documents' }}"
+       aria-label="{{ 'Archive' if doc.archived_at else 'All documents' }}">{{ icon('back') }}</a>
     <input id="title" name="title" value="{{ doc.title }}" placeholder="Untitled" autocomplete="off" spellcheck="false"
            class="min-w-0 flex-1 truncate rounded bg-transparent px-1.5 py-0.5 text-lg font-medium outline-none placeholder:text-stone-300 focus:bg-white/70">
     <div class="topbar-status">
+      {% if doc.archived_at %}<span class="status-badge">Archived</span><span aria-hidden="true">·</span>{% endif %}
       <span id="save-status" data-state="saved">Saved</span>
       <span aria-hidden="true">·</span>
       <span><span id="word-count" class="tabular-nums">{{ doc.word_count }}</span> words</span>
@@ -34,6 +37,11 @@
         </div>
       </div>
       <button type="button" class="icon-btn" onclick="Workshop.toggleShortcuts()" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">{{ icon('keyboard') }}</button>
+      <button type="button" class="btn h-8" data-save-gated="archive"
+              hx-post="/documents/{{ doc.id }}/{{ 'unarchive' if doc.archived_at else 'archive' }}?from_editor=true"
+              hx-swap="none">
+        {{ 'Unarchive' if doc.archived_at else 'Archive' }}
+      </button>
       <a href="/settings" class="icon-btn" title="Settings" aria-label="Settings">{{ icon('settings') }}</a>
     </div>
   </div>

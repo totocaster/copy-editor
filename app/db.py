@@ -114,7 +114,10 @@ CREATE TABLE IF NOT EXISTS settings (
 
 # Columns added after the first schema shipped. Applied idempotently by migrate().
 NEW_COLUMNS: dict[str, list[tuple[str, str]]] = {
-    "documents": [("version", "INTEGER NOT NULL DEFAULT 0")],
+    "documents": [
+        ("version", "INTEGER NOT NULL DEFAULT 0"),
+        ("archived_at", "TEXT"),
+    ],
     "runs": [
         ("provider", "TEXT NOT NULL DEFAULT 'codex'"),
         ("content_json", "TEXT NOT NULL DEFAULT ''"),

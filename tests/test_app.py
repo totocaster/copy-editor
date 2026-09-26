@@ -94,6 +94,28 @@ def test_delete_document(client):
     assert client.get(f"/d/{doc_id}").status_code == 404
 
 
+def test_archive_and_unarchive_keep_document_editable(client):
+    doc_id = make_doc(client)
+
+    archived = client.post(f"/documents/{doc_id}/archive", headers={"HX-Request": "true"})
+    assert archived.status_code == 200 and archived.headers["HX-Refresh"] == "true"
+    assert f'href="/d/{doc_id}"' not in client.get("/").text
+    archive_page = client.get("/?view=archive")
+    assert f'href="/d/{doc_id}"' in archive_page.text and "Unarchive" in archive_page.text
+    assert "New document" not in archive_page.text
+
+    page = client.get(f"/d/{doc_id}")
+    assert page.status_code == 200 and "Archived" in page.text and "Unarchive" in page.text
+    saved = save_doc(client, doc_id, {"type": "doc", "content": [
+        {"type": "paragraph", "content": [{"type": "text", "text": "Edited while archived"}]}]})
+    assert saved.status_code == 200 and saved.json()["word_count"] == 3
+
+    restored = client.post(f"/documents/{doc_id}/unarchive?from_editor=true", headers={"HX-Request": "true"})
+    assert restored.status_code == 204 and restored.headers["HX-Redirect"] == "/"
+    assert f'href="/d/{doc_id}"' in client.get("/").text
+    assert f'href="/d/{doc_id}"' not in client.get("/?view=archive").text
+
+
 def test_settings_and_rules_routes(client):
     r = client.get("/settings?tab=rules")
     assert r.status_code == 200 and "Rules" in r.text

@@ -40,6 +40,23 @@ def test_create_makes_first_revision(conn):
     assert d["word_count"] == 2
 
 
+def test_archive_filters_documents_without_changing_their_content(conn):
+    active = repo.create_document(conn, "Active", doc(para("keep writing")))
+    archived = repo.create_document(conn, "Archived", doc(para("still editable")))
+
+    repo.set_document_archived(conn, archived["id"], True)
+
+    assert [row["id"] for row in repo.list_documents(conn)] == [active["id"]]
+    assert [row["id"] for row in repo.list_documents(conn, archived=True)] == [archived["id"]]
+    assert repo.get_document(conn, archived["id"])["content_text"] == "still editable"
+    assert repo.document_counts(conn) == {"active": 1, "archived": 1}
+
+    repo.save_content(conn, archived["id"], doc(para("edited in archive")))
+    repo.set_document_archived(conn, archived["id"], False)
+    assert repo.get_document(conn, archived["id"])["archived_at"] is None
+    assert repo.get_document(conn, archived["id"])["content_text"] == "edited in archive"
+
+
 def test_rapid_edits_do_not_snapshot(conn):
     d = repo.create_document(conn, "T", doc(para("one")))
     result = repo.save_content(conn, d["id"], doc(para("one two")))

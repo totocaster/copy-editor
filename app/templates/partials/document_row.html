@@ -6,8 +6,24 @@
       <span>{{ d.revision_count }} revision{{ '' if d.revision_count == 1 else 's' }}{% if d.major_count %}, {{ d.major_count }} major{% endif %}</span>
       {% if d.open_annotations %}<span>{{ d.open_annotations }} open note{{ '' if d.open_annotations == 1 else 's' }}</span>{% endif %}
       <span title="{{ d.updated_at|fmt_dt }}">edited {{ d.updated_at|ago }}</span>
+      {% if d.archived_at %}<span title="{{ d.archived_at|fmt_dt }}">archived {{ d.archived_at|ago }}</span>{% endif %}
     </div>
   </a>
+  {% if d.archived_at %}
+  <button type="button"
+          hx-post="/documents/{{ d.id }}/unarchive"
+          hx-target="closest li" hx-swap="outerHTML"
+          class="text-sm text-stone-400 opacity-0 transition hover:text-stone-900 group-hover:opacity-100 focus:opacity-100">
+    Unarchive
+  </button>
+  {% else %}
+  <button type="button"
+          hx-post="/documents/{{ d.id }}/archive"
+          hx-target="closest li" hx-swap="outerHTML"
+          class="text-sm text-stone-400 opacity-0 transition hover:text-stone-900 group-hover:opacity-100 focus:opacity-100">
+    Archive
+  </button>
+  {% endif %}
   <button type="button"
           hx-delete="/documents/{{ d.id }}"
           hx-target="closest li" hx-swap="outerHTML"

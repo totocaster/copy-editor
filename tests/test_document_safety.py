@@ -86,6 +86,6 @@ def test_version_migration_preserves_existing_documents(tmp_path):
     init_db(conn)
     init_db(conn)
     row = repo.get_document(conn, "old")
-    assert row["content_text"] == "Keep this" and row["version"] == 0
+    assert row["content_text"] == "Keep this" and row["version"] == 0 and row["archived_at"] is None
     assert repo.save_content(conn, "old", content("Updated"), expected_version=0)["version"] == 1
     conn.close()
